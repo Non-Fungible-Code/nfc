@@ -2,11 +2,12 @@ import React, { useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 
-export default function Home() {
+const HomePage = () => {
   const router = useRouter();
+
   useEffect(() => {
-    router.push('/codes');
-  }, [router]);
+    router.push('/projects');
+  });
 
   return (
     <>
@@ -16,4 +17,6 @@ export default function Home() {
       </Head>
     </>
   );
-}
+};
+
+export default HomePage;

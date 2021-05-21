@@ -4,6 +4,7 @@ import tw from 'twin.macro';
 const GlobalStyle = createGlobalStyle`
   body {
     ${tw`antialiased`}
+    font-family: 'Montserrat', sans-serif;
   }
 `;
 

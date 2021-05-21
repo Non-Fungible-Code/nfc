@@ -1,4 +1,5 @@
 import React, { useReducer, useEffect } from 'react';
+import Head from 'next/head';
 import { GlobalStyles as BaseStyles } from 'twin.macro';
 import { ethers } from 'ethers';
 import ipfs from 'ipfs';
@@ -74,6 +75,12 @@ const App = ({ Component, pageProps }) => {
 
   useEffect(() => {
     const handleChainChanged = (chainId) => {
+      window.location.reload();
+    };
+    window.ethereum.on('chainChanged', handleChainChanged);
+    const getChain = async () => {
+      // const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+      // handleChainChanged(chainId);
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       dispatch({
         type: 'SET_ETH_PROVIDER',
@@ -81,11 +88,6 @@ const App = ({ Component, pageProps }) => {
           provider,
         },
       });
-    };
-    window.ethereum.on('chainChanged', handleChainChanged);
-    const getChain = async () => {
-      const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-      handleChainChanged(chainId);
     };
     getChain();
     return () => {
@@ -155,6 +157,13 @@ const App = ({ Component, pageProps }) => {
 
   return (
     <>
+      <Head>
+        <link rel="preconnect" href="https://fonts.gstatic.com" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
+      </Head>
       <BaseStyles />
       <GlobalStyle />
       <Context.Provider value={[state, dispatch]}>

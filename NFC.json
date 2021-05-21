@@ -361,12 +361,12 @@
       },
       {
         "internalType": "string",
-        "name": "codegenUrl",
+        "name": "codeCid",
         "type": "string"
       },
       {
         "internalType": "string",
-        "name": "parameterCid",
+        "name": "parametersCid",
         "type": "string"
       },
       {
@@ -730,12 +730,12 @@
           },
           {
             "internalType": "string",
-            "name": "codegenUrl",
+            "name": "codeCid",
             "type": "string"
           },
           {
             "internalType": "string",
-            "name": "parameterCid",
+            "name": "parametersCid",
             "type": "string"
           },
           {

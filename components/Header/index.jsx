@@ -64,13 +64,6 @@ const Header = ({ className }) => {
       <Link href="/">
         <div css={[tw`cursor-pointer`]}>NFC</div>
       </Link>
-      {/* <TabBar> */}
-      {/*   {tabs.map((t) => ( */}
-      {/*     <Link key={t.name} href={t.pathname}> */}
-      {/*       <Tab isActive={router.pathname === t.pathname}>{t.name}</Tab> */}
-      {/*     </Link> */}
-      {/*   ))} */}
-      {/* </TabBar> */}
       <div
         css={[
           tw`flex justify-end items-center`,

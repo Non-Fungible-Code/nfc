@@ -22,37 +22,33 @@ handler.use(
   Multer({
     storage: Multer.diskStorage({
       destination(req, file, cb) {
-        cb(null, 'tmp');
-      },
-      filename(req, file, cb) {
-        const dirname = path.dirname(file.originalname);
-        fs.ensureDir(`tmp/${dirname}`).then(() => {
-          cb(null, file.originalname);
+        const { id } = req.body;
+        const outDir = path.resolve(process.cwd(), `tmp/${id}`);
+        fs.ensureDir(outDir).then(() => {
+          cb(null, outDir);
         });
       },
+      filename(req, file, cb) {
+        cb(null, file.originalname);
+      },
     }),
-    preservePath: true,
-  }).array('files'),
+  }).single('file'),
 );
 
 handler.post(async (req, res) => {
-  const { name, id } = req.body;
+  const outDir = req.file.destination;
 
-  let r;
+  try {
+    const r = await pinata.pinFileToIPFS(fs.createReadStream(req.file.path), {
+      pinataOptions: {
+        cidVersion: 1,
+      },
+    });
 
-  r = await pinata.pinFromFS(path.resolve(process.cwd(), `tmp/${id}`), {
-    pinataMetadata: {
-      name,
-    },
-    pinataOptions: {
-      cidVersion: 1,
-    },
-  });
-  console.log(r);
-
-  await fs.remove(`tmp/${id}`);
-
-  res.status(200).json(r);
+    res.status(200).json({ cid: r.IpfsHash });
+  } finally {
+    await fs.remove(outDir);
+  }
 });
 
 export default handler;

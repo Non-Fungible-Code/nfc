@@ -70,6 +70,7 @@ const CreatePage = () => {
 
   const iframeRef = useRef(null);
   const formRef = useRef(null);
+  const codeFileInputRef = useRef(null);
 
   const [signerAddress, setSignerAddress] = useState(null);
   useEffect(() => {
@@ -82,8 +83,39 @@ const CreatePage = () => {
     }
   }, [state.eth.signer]);
 
+  const [codeCid, setCodeCid] = useState('');
+  const handleCodeFileInputChange = useCallback(() => {
+    const pin = async () => {
+      const formData = new FormData();
+      formData.append('id', uuidv4());
+      for (let i = 0; i < codeFileInputRef.current.files.length; i += 1) {
+        formData.append(
+          'files',
+          codeFileInputRef.current.files[i],
+          codeFileInputRef.current.files[i].webkitrelativepath,
+        );
+      }
+      const res = await axios.post('/api/ipfs/pin-dir', formData);
+      setCodeCid(res.data.cid);
+    };
+    const unpin = async () => {
+      await axios.post('/api/ipfs/unpin', { cid: codeCid });
+      setCodeCid('');
+    };
+    if (codeCid) {
+      unpin();
+    }
+    let size = 0;
+    for (let i = 0; i < codeFileInputRef.current.files.length; i += 1) {
+      size += codeFileInputRef.current.files[i].size;
+    }
+    if (size > 5 * 1024 * 1024) {
+      codeFileInputRef.current.files = null;
+    }
+    pin();
+  }, [codeCid]);
+
   const [formValueByName, setFormValueByName] = useState({
-    codegenUrl: '',
     name: '',
     description: '',
     license: '',
@@ -154,123 +186,97 @@ const CreatePage = () => {
       try {
         e.preventDefault();
 
-        setIsCreating(true);
         if (formRef.current.reportValidity()) {
+          setIsCreating(true);
+
           let res;
-          res = await axios.get(
-            `${
-              formValueByName.codegenUrl
-            }/api/export?address=${encodeURIComponent(
-              signerAddress,
-            )}${parameters.reduce(
+          let formData;
+
+          formData = new FormData();
+          formData.append('id', uuidv4());
+          formData.append(
+            'file',
+            new Blob(
+              [
+                JSON.stringify(
+                  parameters.map((p) => ({
+                    key: p.key,
+                    type: p.type,
+                    name: p.name,
+                    defaultValue: p.defaultValue,
+                  })),
+                ),
+              ],
+              { type: 'application/json' },
+            ),
+            'parameters.json',
+          );
+          res = await axios.post('/api/ipfs/pin-file', formData);
+          const parametersCid = res.data.cid;
+
+          const project = {
+            author: signerAddress,
+            codeCid,
+            parametersCid,
+            name: formValueByName.name,
+            description: formValueByName.description,
+            license: formValueByName.license,
+            pricePerTokenInWei: ethers.utils.parseEther(
+              `${formValueByName.price}`,
+            ),
+            maxNumEditions:
+              formValueByName.isLimitedEdition === 'YES'
+                ? ethers.BigNumber.from(formValueByName.maxNumEditions)
+                : ethers.BigNumber.from(
+                    '115792089237316195423570985008687907853269984665640564039457584007913129639935',
+                  ),
+          };
+
+          const token = {
+            name: `${project.name} #1`,
+            description: `${project.description}`,
+            animation_url: `${new URL(
+              '/',
+              `https://${codeCid}.ipfs.dweb.link`,
+            )}?address=${encodeURIComponent(signerAddress)}${parameters.reduce(
               (prev, { key: k, defaultValue: v }) =>
                 `${prev}&${encodeURIComponent(k)}=${encodeURIComponent(v)}`,
               '',
             )}`,
+            attributes: parameters.map((p) => ({
+              trait_type: p.name,
+              value: p.defaultValue,
+            })),
+          };
+          formData = new FormData();
+          formData.append('id', uuidv4());
+          formData.append(
+            'file',
+            new Blob([JSON.stringify(token)], { type: 'application/json' }),
+            'token.json',
           );
-          console.log(res);
-          const ex = res.data;
+          res = await axios.post('/api/ipfs/pin-file', formData);
+          const tokenCid = res.data.cid;
 
-          res = await Promise.all(
-            ex.paths.map(
-              (p) =>
-                new Promise((resolve, reject) =>
-                  axios
-                    .get(
-                      `${formValueByName.codegenUrl}/api/exports/${ex.id}/${p}`,
-                      {
-                        responseType: 'blob',
-                      },
-                    )
-                    .then((res) => {
-                      resolve({
-                        data: res.data,
-                        path: `${ex.id}/${p}`,
-                      });
-                    })
-                    .catch(reject),
-                ),
-            ),
-          );
+          res = await state.eth.nfc
+            .connect(state.eth.signer)
+            .createProject(
+              project.author,
+              project.codeCid,
+              project.parametersCid,
+              project.name,
+              project.description,
+              project.license,
+              project.pricePerTokenInWei,
+              project.maxNumEditions,
+              tokenCid,
+              { value: project.pricePerTokenInWei },
+            );
           console.log(res);
 
-          const formData = new FormData();
-          formData.append('name', `${formValueByName.name} #0`);
-          formData.append('id', ex.id);
-          res.forEach((f) => {
-            formData.append('files', f.data, f.path);
-          });
-
-          res = await axios.post('/api/pin', formData);
-
-          // const codeCid = res.data.codeCid;
-          // res = await axios.post('/api/pin-cid', { cid: codeCid });
-          // console.log(res);
-
-          // res = await state.ipfs.node.add(
-          //   JSON.stringify(
-          //     parameters.map((p) => ({
-          //       type: p.type,
-          //       name: p.name,
-          //       description: p.description,
-          //       defaultValue: p.defaultValue,
-          //     })),
-          //   ),
-          // );
-          // const parameterCid = res.cid.toString();
-          // res = await axios.post('/api/pin-cid', { cid: parameterCid });
-          // console.log(res);
-
-          // const project = {
-          //   author: signerAddress,
-          //   codegenUrl: formValueByName.codegenUrl,
-          //   parameterCid,
-          //   name: formValueByName.name,
-          //   description: formValueByName.description,
-          //   license: formValueByName.license,
-          //   pricePerTokenInWei: ethers.utils.parseEther(
-          //     `${formValueByName.price}`,
-          //   ),
-          //   maxNumEditions:
-          //     formValueByName.isLimitedEdition === 'YES'
-          //       ? ethers.BigNumber.from(formValueByName.maxNumEditions)
-          //       : ethers.BigNumber.from(
-          //           '115792089237316195423570985008687907853269984665640564039457584007913129639935',
-          //         ),
-          // };
-          // console.log(project);
-          // const token = {
-          //   name: `${project.name} #0`,
-          //   description: `${project.description}`,
-          //   animation_url: `https://${tokenId}.ipfs.dweb.link/`,
-          //   attributes: parameters.map((p) => ({
-          //     trait_type: p.name,
-          //     value: p.defaultValue,
-          //   })),
-          // };
-          // console.log(token);
-          // res = await state.ipfs.node.add(JSON.stringify(token));
-          // const firstMintCid = res.cid.toString();
-          // res = await axios.post('/api/pin-cid', { cid: firstMintCid });
-          // console.log(res);
-          // res = await state.eth.nfc
-          //   .connect(state.eth.signer)
-          //   .createProject(
-          //     project.author,
-          //     project.codegenUrl,
-          //     project.parameterCid,
-          //     project.name,
-          //     project.description,
-          //     project.license,
-          //     project.pricePerTokenInWei,
-          //     project.maxNumEditions,
-          //     firstMintCid,
-          //     { value: project.pricePerTokenInWei },
-          //   );
-          // console.log(res);
+          setIsCreating(false);
+          router.push('/projects');
         }
-        setIsCreating(false);
-        router.push('/projects');
       } catch (err) {
         console.error(err);
         setIsCreating(false);
@@ -278,10 +284,17 @@ const CreatePage = () => {
     },
     [
       router,
-      formValueByName.codegenUrl,
-      formValueByName.name,
+      state.eth.nfc,
+      state.eth.signer,
       signerAddress,
       parameters,
+      codeCid,
+      formValueByName.name,
+      formValueByName.description,
+      formValueByName.license,
+      formValueByName.isLimitedEdition,
+      formValueByName.maxNumEditions,
+      formValueByName.price,
     ],
   );
 
@@ -321,10 +334,10 @@ const CreatePage = () => {
             <iframe
               ref={iframeRef}
               src={
-                formValueByName.codegenUrl
+                codeCid
                   ? `${new URL(
-                      '/api/preview',
-                      formValueByName.codegenUrl,
+                      '/',
+                      `https://${codeCid}.ipfs.dweb.link`,
                     )}?address=${encodeURIComponent(
                       signerAddress,
                     )}${parameters.reduce(
@@ -336,6 +349,7 @@ const CreatePage = () => {
                     )}`
                   : '/404'
               }
+              sandbox="allow-scripts"
             />
           </div>
         </div>
@@ -370,13 +384,14 @@ const CreatePage = () => {
               <div css={[tw`rounded-xl`, tw`shadow-lg`]}>
                 <div css={[tw`p-8`]}>
                   <Field>
-                    <label htmlFor="codegenUrl">Code Generation URL</label>
+                    <label htmlFor="code">Code</label>
                     <input
-                      id="codegenUrl"
-                      type="url"
-                      name="codegenUrl"
-                      value={formValueByName.codegenUrl}
-                      onChange={handleFormInputChange}
+                      ref={codeFileInputRef}
+                      id="code"
+                      type="file"
+                      name="code"
+                      webkitdirectory="true"
+                      onChange={handleCodeFileInputChange}
                       required
                     />
                   </Field>

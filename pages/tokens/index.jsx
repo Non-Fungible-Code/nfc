@@ -10,24 +10,24 @@ import Footer from '../../components/Footer';
 import { liftWhenHoverMixin } from '../../utils/style';
 import nfcAbi from '../../NFC.json';
 
-const ProjectsPage = ({ projects }) => {
+const TokensPage = ({ tokens }) => {
   return (
     <>
       <Head>
-        <title>Projects</title>
+        <title>Tokens</title>
       </Head>
 
       <Header />
       <main css={[tw`container`, tw`mx-auto`, tw`px-4 pt-16`]}>
         <div
           css={[
-            tw`grid grid-cols-1 gap-2`,
-            tw`sm:(grid-cols-3 gap-4)`,
-            tw`xl:(grid-cols-4 gap-8)`,
+            tw`grid grid-cols-1 gap-8`,
+            tw`sm:(grid-cols-3)`,
+            tw`xl:(grid-cols-4)`,
           ]}
         >
-          {projects.map((project) => (
-            <Link key={project.id} href={`/projects/${project.id}`}>
+          {tokens.map((token) => (
+            <Link key={token.id} href={`/tokens/${token.id}`}>
               <div
                 css={[
                   tw`rounded-xl`,
@@ -48,10 +48,10 @@ const ProjectsPage = ({ projects }) => {
                     `,
                   ]}
                 >
-                  <iframe src={project.previewUrl} sandbox="allow-scripts" />
+                  <iframe src={token.animationUrl} sandbox="allow-scripts" />
                 </div>
                 <div css={[tw`p-6`]}>
-                  <h3 css={[tw`text-2xl font-bold`]}>{project.name}</h3>
+                  <h3 css={[tw`text-2xl font-bold`]}>{token.name}</h3>
                   <div
                     css={[
                       tw`flex justify-between items-center`,
@@ -60,17 +60,10 @@ const ProjectsPage = ({ projects }) => {
                     ]}
                   >
                     <div>
-                      Ξ
-                      {ethers.utils.formatEther(
-                        ethers.BigNumber.from(project.pricePerTokenInWei),
-                      )}
+                      {`${token.owner.slice(0, 6)}...${token.owner.slice(
+                        token.owner.length - 4,
+                      )}`}
                     </div>
-                    <div>{`${project.numMints} of ${
-                      project.maxNumEditions ===
-                      '115792089237316195423570985008687907853269984665640564039457584007913129639935'
-                        ? '∞'
-                        : project.maxNumEditions
-                    }`}</div>
                   </div>
                 </div>
               </div>
@@ -91,7 +84,7 @@ export async function getStaticProps() {
   );
   const nfc = new ethers.Contract(NFC_ADDRESS, nfcAbi, provider);
   let res;
-  res = await nfc.numProjects();
+  res = await nfc.totalSupply();
   let n = 0;
   if (res.gt('1000')) {
     n = 1000;
@@ -99,26 +92,25 @@ export async function getStaticProps() {
     n = res.toNumber();
   }
   res = await Promise.all(
-    new Array(n).fill(null).map((_, idx) => nfc.project(idx)),
+    new Array(n).fill(null).map((_, idx) => nfc.tokenURI(idx)),
   );
-  const projects = res;
-  res = await Promise.all(res.map((_, idx) => nfc.tokenIdsByProjectId(idx)));
-  const numMintss = res.map((r) => r.length);
-  res = await Promise.all(res.map((r) => nfc.tokenURI(r[r.length - 1])));
-  res = await Promise.all(res.map((r) => axios.get(r)));
-  const previewUrls = res.map((r) => r.data.animation_url);
+  const tokenUrls = res;
+  res = await Promise.all(tokenUrls.map((url) => axios.get(url)));
+  const tokens = res.map((r) => r.data);
+  res = await Promise.all(
+    new Array(n).fill(null).map((_, idx) => nfc.ownerOf(idx)),
+  );
+  const owners = res;
 
   return {
     props: {
-      projects: projects
-        .map((p, idx) => ({
+      tokens: tokens
+        .map((t, idx) => ({
           id: idx,
-          name: p.name,
-          description: p.description,
-          pricePerTokenInWei: p.pricePerTokenInWei.toString(),
-          maxNumEditions: p.maxNumEditions.toString(),
-          numMints: numMintss[idx],
-          previewUrl: previewUrls[idx],
+          name: t.name,
+          description: t.description,
+          animationUrl: t.animation_url,
+          owner: owners[idx],
         }))
         .reverse(),
     },
@@ -126,4 +118,4 @@ export async function getStaticProps() {
   };
 }
 
-export default ProjectsPage;
+export default TokensPage;

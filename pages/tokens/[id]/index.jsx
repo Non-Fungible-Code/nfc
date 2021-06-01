@@ -21,10 +21,6 @@ const StyledHeader = styled(Header)(() => [
 const TokenPage = ({ token }) => {
   const router = useRouter();
 
-  if (router.isFallback) {
-    return <div>Loading...</div>;
-  }
-
   const [state, dispatch] = useContext(Context);
 
   const [signerAddress, setSignerAddress] = useState(null);
@@ -36,7 +32,11 @@ const TokenPage = ({ token }) => {
     if (state.eth.signer) {
       getSignerAddress();
     }
-  }, [state.eth.signer]);
+  }, [state?.eth?.signer]);
+
+  if (router.isFallback) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <>

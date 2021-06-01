@@ -4,13 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start"
+    "build": "NODE_ENV=production next build",
+    "start": "NODE_ENV=production next start"
   },
   "dependencies": {
     "@pinata/sdk": "^1.1.13",
     "axios": "^0.21.1",
-    "ethers": "^5.2.0",
+    "ethers": "^5.3.0",
     "fs-extra": "^10.0.0",
     "ipfs": "^0.55.2",
     "multer": "^1.4.2",

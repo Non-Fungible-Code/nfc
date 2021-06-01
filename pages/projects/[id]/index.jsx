@@ -8,7 +8,6 @@ import React, {
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import Error from 'next/error';
 import tw, { css, styled } from 'twin.macro';
 import {
   Loader as LoaderIcon,
@@ -24,30 +23,6 @@ import Footer from '../../../components/Footer';
 import { liftWhenHoverMixin } from '../../../utils/style';
 import { Context } from '../../_app';
 import nfcAbi from '../../../NFC.json';
-
-const LinkCard = ({ children, icon: Icon, isExternal }) => (
-  <div
-    css={[
-      tw`flex justify-between items-center`,
-      tw`max-w-sm`,
-      tw`p-4`,
-      tw`rounded-xl`,
-      tw`shadow-lg`,
-      tw`cursor-pointer`,
-      ...liftWhenHoverMixin,
-    ]}
-  >
-    <div css={[tw`flex items-center`]}>
-      <ImageIcon css={[tw`mr-4`]} />
-      <span css={[tw`text-sm font-semibold`]}>{children}</span>
-    </div>
-    {isExternal && (
-      <div>
-        <ExternalLinkIcon css={[tw`text-gray-300`]} />
-      </div>
-    )}
-  </div>
-);
 
 const StyledHeader = styled(Header)(() => [
   tw`absolute! left-1/2`,
@@ -70,30 +45,32 @@ const ProjectPage = ({ project }) => {
     if (state.eth.signer) {
       getSignerAddress();
     }
-  }, [state.eth.signer]);
+  }, [state?.eth?.signer]);
 
-  const [parameters, setParameters] = useState(
-    project.parameters.map((p) => ({
-      ...p,
-      value: p.defaultValue,
-    })),
-  );
-  const handleParameterFieldChange = useCallback(
-    (e) => {
-      setParameters((prev) => {
-        const nextParameters = [...prev];
-        const [id, name] = e.target.name.split('__');
-        const idx = nextParameters.findIndex((p) => p.id === id);
-        const nextParameter = {
-          ...nextParameters[idx],
-          [name]: e.target.value,
-        };
-        nextParameters.splice(idx, 1, nextParameter);
-        return nextParameters;
-      });
-    },
-    [setParameters],
-  );
+  const [parameters, setParameters] = useState([]);
+  useEffect(() => {
+    if (project?.parameters) {
+      setParameters(
+        project.parameters.map((p) => ({
+          ...p,
+          value: p.defaultValue,
+        })),
+      );
+    }
+  }, [project?.parameters]);
+  const handleParameterFieldChange = useCallback((e) => {
+    setParameters((prev) => {
+      const nextParameters = [...prev];
+      const [id, name] = e.target.name.split('__');
+      const idx = nextParameters.findIndex((p) => p.id === id);
+      const nextParameter = {
+        ...nextParameters[idx],
+        [name]: e.target.value,
+      };
+      nextParameters.splice(idx, 1, nextParameter);
+      return nextParameters;
+    });
+  }, []);
 
   const [isMinting, setIsMinting] = useState(false);
   const handleMintButtonClick = useCallback(
@@ -149,14 +126,14 @@ const ProjectPage = ({ project }) => {
     [
       router,
       signerAddress,
-      state.eth.nfc,
-      state.eth.signer,
+      state?.eth?.nfc,
+      state?.eth?.signer,
       parameters,
-      project.id,
-      project.codeCid,
-      project.name,
-      project.description,
-      project.pricePerTokenInWei,
+      project?.id,
+      project?.codeCid,
+      project?.name,
+      project?.description,
+      project?.pricePerTokenInWei,
     ],
   );
 
@@ -226,7 +203,27 @@ const ProjectPage = ({ project }) => {
             </p>
             <div css={[tw`mb-8`]}>
               <Link href="/tokens">
-                <LinkCard icon={ImageIcon}>View on Gallery</LinkCard>
+                <div
+                  css={[
+                    tw`flex justify-between items-center`,
+                    tw`max-w-sm`,
+                    tw`p-4`,
+                    tw`rounded-xl`,
+                    tw`shadow-lg`,
+                    tw`cursor-pointer`,
+                    ...liftWhenHoverMixin,
+                  ]}
+                >
+                  <div css={[tw`flex items-center`]}>
+                    <ImageIcon css={[tw`mr-4`]} />
+                    <span css={[tw`text-sm font-semibold`]}>
+                      See on Gallery
+                    </span>
+                  </div>
+                  <div>
+                    <ExternalLinkIcon css={[tw`text-gray-300`]} />
+                  </div>
+                </div>
               </Link>
             </div>
           </div>

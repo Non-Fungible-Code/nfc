@@ -1,10 +1,9 @@
 import React, { useReducer, useEffect } from 'react';
-import Head from 'next/head';
-import { GlobalStyles as BaseStyles } from 'twin.macro';
 import { ethers } from 'ethers';
 import ipfs from 'ipfs';
 
-import GlobalStyle from '../components/GlobalStyle';
+import '../styles.css';
+import GlobalStyles from '../components/GlobalStyles';
 import nfcAbi from '../NFC.json';
 
 const { NEXT_PUBLIC_NFC_ADDRESS } = process.env;
@@ -157,15 +156,7 @@ const App = ({ Component, pageProps }) => {
 
   return (
     <>
-      <Head>
-        <link rel="preconnect" href="https://fonts.gstatic.com" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
-      </Head>
-      <BaseStyles />
-      <GlobalStyle />
+      <GlobalStyles />
       <Context.Provider value={[state, dispatch]}>
         <Component {...pageProps} />
       </Context.Provider>

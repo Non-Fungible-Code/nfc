@@ -6,10 +6,15 @@ import React, {
   useRef,
 } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Error from 'next/error';
 import tw, { css, styled } from 'twin.macro';
-import { Loader as LoaderIcon } from 'react-feather';
+import {
+  Loader as LoaderIcon,
+  Image as ImageIcon,
+  ExternalLink as ExternalLinkIcon,
+} from 'react-feather';
 import { v4 as uuidv4 } from 'uuid';
 import { ethers } from 'ethers';
 import axios from 'axios';
@@ -19,6 +24,30 @@ import Footer from '../../../components/Footer';
 import { liftWhenHoverMixin } from '../../../utils/style';
 import { Context } from '../../_app';
 import nfcAbi from '../../../NFC.json';
+
+const LinkCard = ({ children, icon: Icon, isExternal }) => (
+  <div
+    css={[
+      tw`flex justify-between items-center`,
+      tw`max-w-sm`,
+      tw`p-4`,
+      tw`rounded-xl`,
+      tw`shadow-lg`,
+      tw`cursor-pointer`,
+      ...liftWhenHoverMixin,
+    ]}
+  >
+    <div css={[tw`flex items-center`]}>
+      <ImageIcon css={[tw`mr-4`]} />
+      <span css={[tw`text-sm font-semibold`]}>{children}</span>
+    </div>
+    {isExternal && (
+      <div>
+        <ExternalLinkIcon css={[tw`text-gray-300`]} />
+      </div>
+    )}
+  </div>
+);
 
 const StyledHeader = styled(Header)(() => [
   tw`absolute! left-1/2`,
@@ -183,7 +212,7 @@ const ProjectPage = ({ project }) => {
         >
           <div css={[tw`col-span-1`, tw`xl:col-span-3`]}>
             <h2 css={[tw`mb-12`, tw`text-5xl font-bold`]}>{project.name}</h2>
-            <p css={[tw`mb-8`, tw`whitespace-pre-wrap`, tw`sm:max-w-sm`]}>
+            <p css={[tw`mb-8`, tw`whitespace-pre-wrap`, tw`sm:max-w-md`]}>
               {project.description}
             </p>
             <p css={[tw`mb-8`, tw`font-bold`]}>
@@ -195,6 +224,11 @@ const ProjectPage = ({ project }) => {
                   : project.maxNumEditions}
               </span>
             </p>
+            <div css={[tw`mb-8`]}>
+              <Link href="/tokens">
+                <LinkCard icon={ImageIcon}>View on Gallery</LinkCard>
+              </Link>
+            </div>
           </div>
           <div css={[tw`col-span-1`, tw`xl:col-span-2`]}>
             <form ref={formRef}>

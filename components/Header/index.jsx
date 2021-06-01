@@ -18,6 +18,38 @@ const Button = styled.button(() => [
   ...liftWhenHoverMixin,
 ]);
 
+const TabBar = styled.div(() => [
+  tw`hidden`,
+  tw`absolute left-1/2`,
+  tw`transform -translate-x-1/2`,
+  tw`p-2`,
+  tw`bg-white`,
+  tw`rounded-xl`,
+  tw`shadow-lg`,
+  tw`sm:flex`,
+]);
+
+const Tab = styled.div(({ isActive }) => [
+  tw`px-6 py-2`,
+  tw`mx-1`,
+  tw`text-lg font-semibold`,
+  tw`rounded-xl`,
+  tw`cursor-pointer`,
+  isActive && tw`bg-black text-white`,
+  !isActive && tw`hover:bg-gray-200`,
+]);
+
+const tabs = [
+  {
+    name: 'Curated',
+    pathname: '/projects/curated',
+  },
+  {
+    name: 'All',
+    pathname: '/projects',
+  },
+];
+
 const Header = ({ className }) => {
   const router = useRouter();
   const [state, dispatch] = useContext(Context);
@@ -64,6 +96,15 @@ const Header = ({ className }) => {
       <Link href="/">
         <div css={[tw`cursor-pointer`]}>NFC</div>
       </Link>
+      {router.pathname !== '/create' && (
+        <TabBar>
+          {tabs.map((t) => (
+            <Link key={t.name} href={t.pathname}>
+              <Tab isActive={router.pathname === t.pathname}>{t.name}</Tab>
+            </Link>
+          ))}
+        </TabBar>
+      )}
       <div
         css={[
           tw`flex justify-end items-center`,

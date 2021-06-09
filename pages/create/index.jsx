@@ -114,7 +114,10 @@ const CreatePage = () => {
       for (let i = 0; i < codeFileInputRef.current.files.length; i += 1) {
         size += codeFileInputRef.current.files[i].size;
       }
-      if (size > process.env.NEXT_PUBLIC_UPLOAD_LIMIT_IN_MB * 1024 * 1024) {
+      if (
+        size >
+        Number(process.env.NEXT_PUBLIC_UPLOAD_LIMIT_IN_MB) * 1024 * 1024
+      ) {
         // TODO:
         codeFileInputRef.current.files = null;
         return;

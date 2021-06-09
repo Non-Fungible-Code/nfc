@@ -1,5 +1,6 @@
 import React, { useContext, useCallback, useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/router';
 import tw, { css, styled } from 'twin.macro';
 import { Menu as MenuIcon } from 'react-feather';
@@ -94,7 +95,12 @@ const Header = ({ className }) => {
       ]}
     >
       <Link href="/">
-        <div css={[tw`cursor-pointer`]}>NFC</div>
+        <Image
+          css={[tw`cursor-pointer`]}
+          src="/NFC.svg"
+          width={100}
+          height={56}
+        />
       </Link>
       {router.pathname !== '/create' && (
         <TabBar>

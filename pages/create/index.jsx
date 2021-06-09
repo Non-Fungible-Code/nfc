@@ -83,11 +83,11 @@ const CreatePage = () => {
     }
   }, [state.eth.signer]);
 
-  const [codeCid, setCodeCid] = useState('');
-  const handleCodeFileInputChange = useCallback(() => {
+  const [isUploading, setIsUploading] = useState(false);
+  const [codeCid, setCodeCid] = useState(null);
+  const handleCodeFileInputChange = useCallback(async () => {
     const pin = async () => {
       const formData = new FormData();
-      formData.append('id', uuidv4());
       for (let i = 0; i < codeFileInputRef.current.files.length; i += 1) {
         formData.append(
           'files',
@@ -95,24 +95,40 @@ const CreatePage = () => {
           codeFileInputRef.current.files[i].webkitrelativepath,
         );
       }
-      const res = await axios.post('/api/ipfs/pin-dir', formData);
+      const res = await axios.post(
+        `${new URL('/api/ipfs/pin', process.env.NEXT_PUBLIC_API_URL)}`,
+        formData,
+      );
       setCodeCid(res.data.cid);
     };
-    const unpin = async () => {
-      await axios.post('/api/ipfs/unpin', { cid: codeCid });
-      setCodeCid('');
+    const unpin = async (cid) => {
+      await axios.post(
+        `${new URL('/api/ipfs/unpin', process.env.NEXT_PUBLIC_API_URL)}`,
+        { cid },
+      );
+      setCodeCid(null);
     };
-    if (codeCid) {
-      unpin();
+    try {
+      setIsUploading(true);
+      let size = 0;
+      for (let i = 0; i < codeFileInputRef.current.files.length; i += 1) {
+        size += codeFileInputRef.current.files[i].size;
+      }
+      if (size > process.env.NEXT_PUBLIC_UPLOAD_LIMIT_IN_MB * 1024 * 1024) {
+        // TODO:
+        codeFileInputRef.current.files = null;
+        return;
+      }
+      if (codeCid) {
+        await unpin(codeCid);
+      }
+      await pin();
+    } catch (err) {
+      // TODO:
+      console.error(err);
+    } finally {
+      setIsUploading(false);
     }
-    let size = 0;
-    for (let i = 0; i < codeFileInputRef.current.files.length; i += 1) {
-      size += codeFileInputRef.current.files[i].size;
-    }
-    if (size > 5 * 1024 * 1024) {
-      codeFileInputRef.current.files = null;
-    }
-    pin();
   }, [codeCid]);
 
   const [formValueByName, setFormValueByName] = useState({
@@ -183,19 +199,21 @@ const CreatePage = () => {
   const [isCreating, setIsCreating] = useState(false);
   const handleCreateButtonClick = useCallback(
     async (e) => {
-      try {
-        e.preventDefault();
-
-        if (formRef.current.reportValidity()) {
+      e.preventDefault();
+      if (formRef.current.reportValidity()) {
+        const pin = async (blob) => {
+          const formData = new FormData();
+          formData.append('file', blob);
+          const res = await axios.post(
+            `${new URL('/api/ipfs/pin', process.env.NEXT_PUBLIC_API_URL)}`,
+            formData,
+          );
+          return res.data.cid;
+        };
+        try {
           setIsCreating(true);
 
-          let res;
-          let formData;
-
-          formData = new FormData();
-          formData.append('id', uuidv4());
-          formData.append(
-            'file',
+          const parametersCid = await pin(
             new Blob(
               [
                 JSON.stringify(
@@ -209,10 +227,7 @@ const CreatePage = () => {
               ],
               { type: 'application/json' },
             ),
-            'parameters.json',
           );
-          res = await axios.post('/api/ipfs/pin-file', formData);
-          const parametersCid = res.data.cid;
 
           const project = {
             author: signerAddress,
@@ -232,33 +247,29 @@ const CreatePage = () => {
                   ),
           };
 
+          // TODO: Let users customize token names and descriptions?
           const token = {
-            name: `${project.name} #1`,
+            name: `${project.name}`,
             description: `${project.description}`,
             animation_url: `${new URL(
-              '/',
-              `https://${codeCid}.ipfs.dweb.link`,
-            )}?address=${encodeURIComponent(signerAddress)}${parameters.reduce(
-              (prev, { key: k, defaultValue: v }) =>
-                `${prev}&${encodeURIComponent(k)}=${encodeURIComponent(v)}`,
-              '',
+              `https://${codeCid}.ipfs.dweb.link?address=${encodeURIComponent(
+                signerAddress,
+              )}${parameters.reduce(
+                (prev, { key: k, defaultValue: v }) =>
+                  `${prev}&${encodeURIComponent(k)}=${encodeURIComponent(v)}`,
+                '',
+              )}`,
             )}`,
             attributes: parameters.map((p) => ({
               trait_type: p.name,
               value: p.defaultValue,
             })),
           };
-          formData = new FormData();
-          formData.append('id', uuidv4());
-          formData.append(
-            'file',
+          const tokenCid = await pin(
             new Blob([JSON.stringify(token)], { type: 'application/json' }),
-            'token.json',
           );
-          res = await axios.post('/api/ipfs/pin-file', formData);
-          const tokenCid = res.data.cid;
 
-          res = await state.eth.nfc
+          await state.eth.nfc
             .connect(state.eth.signer)
             .createProject(
               project.author,
@@ -272,14 +283,14 @@ const CreatePage = () => {
               tokenCid,
               { value: project.pricePerTokenInWei },
             );
-          console.log(res);
 
-          setIsCreating(false);
           router.push('/projects');
+        } catch (err) {
+          // TODO:
+          console.error(err);
+        } finally {
+          setIsCreating(false);
         }
-      } catch (err) {
-        console.error(err);
-        setIsCreating(false);
       }
     },
     [
@@ -334,21 +345,23 @@ const CreatePage = () => {
             <iframe
               ref={iframeRef}
               src={
-                codeCid
+                isUploading
+                  ? '/iframes/uploading'
+                  : codeCid
                   ? `${new URL(
-                      '/',
-                      `https://${codeCid}.ipfs.dweb.link`,
-                    )}?address=${encodeURIComponent(
-                      signerAddress,
-                    )}${parameters.reduce(
-                      (prev, { key: k, defaultValue: v }) =>
-                        `${prev}&${encodeURIComponent(k)}=${encodeURIComponent(
-                          v,
-                        )}`,
-                      '',
+                      `https://${codeCid}.ipfs.dweb.link?address=${encodeURIComponent(
+                        signerAddress,
+                      )}${parameters.reduce(
+                        (prev, { key: k, defaultValue: v }) =>
+                          `${prev}&${encodeURIComponent(
+                            k,
+                          )}=${encodeURIComponent(v)}`,
+                        '',
+                      )}`,
                     )}`
-                  : '/404'
+                  : '/iframes/please-upload'
               }
+              allow="accelerometer; autoplay; encrypted-media; fullscreen; gyroscope; picture-in-picture"
               sandbox="allow-scripts"
             />
           </div>

@@ -217,11 +217,13 @@ const ProjectPage = ({ project }) => {
                   <div css={[tw`flex items-center`]}>
                     <ImageIcon css={[tw`mr-4`]} />
                     <span css={[tw`text-sm font-semibold`]}>
-                      See on Gallery
+                      Browse Gallery
                     </span>
                   </div>
                   <div>
-                    <ExternalLinkIcon css={[tw`text-gray-300`]} />
+                    <ExternalLinkIcon
+                      css={[tw`invisible`, tw`text-gray-300`]}
+                    />
                   </div>
                 </div>
               </Link>

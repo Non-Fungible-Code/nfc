@@ -13,7 +13,6 @@ const HomePage = () => {
     <>
       <Head>
         <title>NFC</title>
-        <link rel="icon" href="/favicon.ico" />
       </Head>
     </>
   );

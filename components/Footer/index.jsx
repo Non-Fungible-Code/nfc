@@ -24,9 +24,15 @@ const Footer = ({ className }) => {
           `,
         ]}
       >
-        <Link href="https://twitter.com/nf_code">Twitter</Link>
-        <Link href="https://discord.gg/HqSxPknrRd">Discord</Link>
-        <Link href="https://github.com/Non-Fungible-Code">Github</Link>
+        <Link href="https://twitter.com/nf_code" target="_blank">
+          Twitter
+        </Link>
+        <Link href="https://discord.gg/HqSxPknrRd" target="_blank">
+          Discord
+        </Link>
+        <Link href="https://github.com/Non-Fungible-Code" target="_blank">
+          Github
+        </Link>
       </div>
       <div
         css={[
@@ -39,8 +45,12 @@ const Footer = ({ className }) => {
           `,
         ]}
       >
-        <Link href="">About</Link>
-        <Link href="">Help</Link>
+        <Link href="https://docs.nfcode.art/" target="_blank">
+          About
+        </Link>
+        <Link href="https://docs.nfcode.art/faqs" target="_blank">
+          Help
+        </Link>
       </div>
     </div>
   );

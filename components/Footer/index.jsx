@@ -24,9 +24,9 @@ const Footer = ({ className }) => {
           `,
         ]}
       >
-        <Link href="">Twitter</Link>
-        <Link href="">Discord</Link>
-        <Link href="">Github</Link>
+        <Link href="https://twitter.com/nf_code">Twitter</Link>
+        <Link href="https://discord.gg/HqSxPknrRd">Discord</Link>
+        <Link href="https://github.com/Non-Fungible-Code">Github</Link>
       </div>
       <div
         css={[

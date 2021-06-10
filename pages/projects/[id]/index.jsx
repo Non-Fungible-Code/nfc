@@ -75,52 +75,55 @@ const ProjectPage = ({ project }) => {
   const [isMinting, setIsMinting] = useState(false);
   const handleMintButtonClick = useCallback(
     async (e) => {
-      try {
-        e.preventDefault();
-
-        if (formRef.current.reportValidity()) {
+      e.preventDefault();
+      if (formRef.current.reportValidity()) {
+        const pin = async (blob, filename) => {
+          const formData = new FormData();
+          formData.append('file', blob, filename);
+          const res = await axios.post(
+            `${new URL('/api/ipfs/pin', process.env.NEXT_PUBLIC_API_URL)}`,
+            formData,
+          );
+          return res.data.cid;
+        };
+        try {
           setIsMinting(true);
 
-          let res;
           const token = {
             name: `${project.name}`,
             description: `${project.description}`,
             animation_url: `${new URL(
-              '/',
-              `https://${project.codeCid}.ipfs.dweb.link`,
-            )}?address=${encodeURIComponent(signerAddress)}${parameters.reduce(
-              (prev, { key: k, value: v }) =>
-                `${prev}&${encodeURIComponent(k)}=${encodeURIComponent(v)}`,
-              '',
+              `https://${
+                project.codeCid
+              }.ipfs.dweb.link?address=${encodeURIComponent(
+                signerAddress,
+              )}${parameters.reduce(
+                (prev, { key: k, value: v }) =>
+                  `${prev}&${encodeURIComponent(k)}=${encodeURIComponent(v)}`,
+                '',
+              )}`,
             )}`,
             attributes: parameters.map((p) => ({
               trait_type: p.name,
               value: p.value,
             })),
           };
-          let formData;
-          formData = new FormData();
-          formData.append('id', uuidv4());
-          formData.append(
-            'file',
+          const tokenCid = await pin(
             new Blob([JSON.stringify(token)], { type: 'application/json' }),
             'token.json',
           );
-          res = await axios.post('/api/ipfs/pin-file', formData);
-          const tokenCid = res.data.cid;
-          res = await state.eth.nfc
+          await state.eth.nfc
             .connect(state.eth.signer)
             .mint(signerAddress, project.id, tokenCid, {
               value: project.pricePerTokenInWei,
             });
-          console.log(res);
 
-          setIsMinting(false);
           router.push('/tokens');
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setIsMinting(false);
         }
-      } catch (err) {
-        console.error(err);
-        setIsMinting(false);
       }
     },
     [

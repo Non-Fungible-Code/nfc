@@ -137,7 +137,7 @@ const CreatePage = () => {
   const [formValueByName, setFormValueByName] = useState({
     name: '',
     description: '',
-    license: '',
+    license: 'NIFTY',
     isLimitedEdition: 'NO',
     maxNumEditions: 1,
     price: 0.001,
@@ -204,9 +204,9 @@ const CreatePage = () => {
     async (e) => {
       e.preventDefault();
       if (formRef.current.reportValidity()) {
-        const pin = async (blob) => {
+        const pin = async (blob, filename) => {
           const formData = new FormData();
-          formData.append('file', blob);
+          formData.append('file', blob, filename);
           const res = await axios.post(
             `${new URL('/api/ipfs/pin', process.env.NEXT_PUBLIC_API_URL)}`,
             formData,
@@ -230,6 +230,7 @@ const CreatePage = () => {
               ],
               { type: 'application/json' },
             ),
+            'parameters.json',
           );
 
           const project = {
@@ -255,7 +256,9 @@ const CreatePage = () => {
             name: `${project.name}`,
             description: `${project.description}`,
             animation_url: `${new URL(
-              `https://${codeCid}.ipfs.dweb.link?address=${encodeURIComponent(
+              `https://${
+                project.codeCid
+              }.ipfs.dweb.link?address=${encodeURIComponent(
                 signerAddress,
               )}${parameters.reduce(
                 (prev, { key: k, defaultValue: v }) =>
@@ -270,6 +273,7 @@ const CreatePage = () => {
           };
           const tokenCid = await pin(
             new Blob([JSON.stringify(token)], { type: 'application/json' }),
+            'token.json',
           );
 
           await state.eth.nfc
@@ -435,7 +439,7 @@ const CreatePage = () => {
                       value={formValueByName.description}
                       onChange={handleFormInputChange}
                       rows="3"
-                      maxLength="500"
+                      maxLength="1000"
                       required
                     />
                   </Field>

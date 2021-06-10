@@ -77,9 +77,9 @@ const TokensPage = ({ tokens }) => {
 };
 
 export async function getStaticProps() {
-  const { NODE_ENV, ALCHEMY_API_KEY, NFC_ADDRESS } = process.env;
+  const { NETWORK, ALCHEMY_API_KEY, NFC_ADDRESS } = process.env;
   const provider = new ethers.providers.AlchemyProvider(
-    NODE_ENV === 'development' ? 'rinkeby' : 'homestead',
+    NETWORK,
     ALCHEMY_API_KEY,
   );
   const nfc = new ethers.Contract(NFC_ADDRESS, nfcAbi, provider);

@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useRef,
+  useMemo,
 } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -28,17 +29,6 @@ const StyledHeader = styled(Header)(() => [
 ]);
 
 const StyledFooter = styled(Footer)(() => [tw`sm:hidden`]);
-
-const Button = styled.button(() => [
-  tw`px-6 py-4`,
-  tw`bg-black`,
-  tw`text-white font-bold`,
-  tw`rounded-full`,
-  tw`shadow-lg`,
-  tw`cursor-pointer`,
-  tw`focus:outline-none`,
-  ...liftWhenHoverMixin,
-]);
 
 const Field = styled.div(() => [
   tw`not-first:mt-4`,
@@ -68,11 +58,9 @@ const CreatePage = () => {
 
   const router = useRouter();
 
-  const iframeRef = useRef(null);
-  const formRef = useRef(null);
   const codeFileInputRef = useRef(null);
 
-  const [signerAddress, setSignerAddress] = useState(null);
+  const [signerAddress, setSignerAddress] = useState('');
   useEffect(() => {
     const getSignerAddress = async () => {
       const addr = await state.eth.signer.getAddress();
@@ -81,11 +69,11 @@ const CreatePage = () => {
     if (state.eth.signer) {
       getSignerAddress();
     }
-  }, [state.eth.signer]);
+  }, [state?.eth?.signer]);
 
   const [isUploading, setIsUploading] = useState(false);
-  const [codeCid, setCodeCid] = useState(null);
-  const handleCodeFileInputChange = useCallback(async () => {
+  const [projectCodeCid, setProjectCodeCid] = useState('');
+  const handleFormCodeFileInputChange = useCallback(async () => {
     const pin = async () => {
       const formData = new FormData();
       for (let i = 0; i < codeFileInputRef.current.files.length; i += 1) {
@@ -95,19 +83,22 @@ const CreatePage = () => {
           codeFileInputRef.current.files[i].webkitrelativepath,
         );
       }
-      const res = await axios.post(
-        `${new URL('/api/ipfs/pin', process.env.NEXT_PUBLIC_API_URL)}`,
-        formData,
-      );
-      setCodeCid(res.data.cid);
+      const { cid } = await axios
+        .post(
+          `${new URL('ipfs/pin', process.env.NEXT_PUBLIC_API_BASE_URL)}`,
+          formData,
+        )
+        .then((res) => res.data);
+      setProjectCodeCid(cid);
     };
     const unpin = async (cid) => {
       await axios.post(
-        `${new URL('/api/ipfs/unpin', process.env.NEXT_PUBLIC_API_URL)}`,
+        `${new URL('ipfs/unpin', process.env.NEXT_PUBLIC_API_BASE_URL)}`,
         { cid },
       );
-      setCodeCid(null);
+      setProjectCodeCid('');
     };
+
     try {
       setIsUploading(true);
       let size = 0;
@@ -116,14 +107,17 @@ const CreatePage = () => {
       }
       if (
         size >
-        Number(process.env.NEXT_PUBLIC_UPLOAD_LIMIT_IN_MB) * 1024 * 1024
+        Number(process.env.NEXT_PUBLIC_MAX_UPLOAD_SIZE_IN_MB) * 1024 * 1024
       ) {
-        // TODO:
-        codeFileInputRef.current.files = null;
-        return;
+        codeFileInputRef.current.files = [];
+        throw new Error(
+          `Exceed the maximum of total upload size: ${Number(
+            process.env.NEXT_PUBLIC_MAX_UPLOAD_SIZE_IN_MB,
+          )}MB`,
+        );
       }
-      if (codeCid) {
-        await unpin(codeCid);
+      if (projectCodeCid) {
+        await unpin(projectCodeCid);
       }
       await pin();
     } catch (err) {
@@ -132,39 +126,34 @@ const CreatePage = () => {
     } finally {
       setIsUploading(false);
     }
-  }, [codeCid]);
+  }, [projectCodeCid]);
 
   const [formValueByName, setFormValueByName] = useState({
     name: '',
     description: '',
-    license: 'NIFTY',
+    license: '',
     isLimitedEdition: 'NO',
     maxNumEditions: 1,
     price: 0.001,
   });
-  const handleFormInputChange = useCallback(
-    (e) => {
-      setFormValueByName((prev) => ({
-        ...prev,
-        [e.target.name]: e.target.value,
-      }));
-      if (e.target.name === 'isLimitedEdition' && e.target.value === 'NO') {
-        setFormValueByName((prev) => ({
-          ...prev,
-          maxNumEditions: 1,
-        }));
-      }
-    },
-    [setFormValueByName],
-  );
+  const handleFormInputChange = useCallback((e) => {
+    setFormValueByName((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+      ...(e.target.name === 'isLimitedEdition' && e.target.value === 'NO'
+        ? {
+            maxNumEditions: 1,
+          }
+        : {}),
+    }));
+  }, []);
 
-  const [parameters, setParameters] = useState([]);
+  const [projectParameters, setProjectParameters] = useState([]);
   const handleParameterFieldChange = useCallback(
-    (e) => {
-      setParameters((prev) => {
+    (id, name) => (e) => {
+      setProjectParameters((prev) => {
         const nextParameters = [...prev];
-        const [id, name] = e.target.name.split('__');
-        const idx = nextParameters.findIndex((p) => p.id === id);
+        const idx = nextParameters.findIndex((param) => param.id === id);
         const nextParameter = {
           ...nextParameters[idx],
           [name]: e.target.value,
@@ -173,10 +162,10 @@ const CreatePage = () => {
         return nextParameters;
       });
     },
-    [setParameters],
+    [],
   );
   const handleAddParameterButtonClick = useCallback(() => {
-    setParameters((prev) => [
+    setProjectParameters((prev) => [
       ...prev,
       {
         id: uuidv4(),
@@ -186,45 +175,84 @@ const CreatePage = () => {
         defaultValue: '',
       },
     ]);
-  }, [setParameters]);
+  }, []);
   const handleRemoveParameterButtonClick = useCallback(
     (id) => () => {
-      setParameters((prev) => {
+      setProjectParameters((prev) => {
         const nextParameters = [...prev];
-        const idx = nextParameters.findIndex((p) => p.id === id);
+        const idx = nextParameters.findIndex((param) => param.id === id);
         nextParameters.splice(idx, 1);
         return nextParameters;
       });
     },
-    [setParameters],
+    [],
+  );
+
+  const tokenPreviewUrl = useMemo(
+    () =>
+      projectCodeCid
+        ? `${new URL(
+            `/?${new URLSearchParams({
+              address: signerAddress,
+              ...projectParameters.reduce(
+                (prev, param) => ({
+                  ...prev,
+                  [param.key]: param.defaultValue,
+                }),
+                {},
+              ),
+            })}`,
+            `https://${projectCodeCid}.ipfs.${process.env.NEXT_PUBLIC_IPFS_GATEWAY_DOMAIN}`,
+          )}`
+        : '',
+    [projectCodeCid, signerAddress, projectParameters],
   );
 
   const [isCreating, setIsCreating] = useState(false);
-  const handleCreateButtonClick = useCallback(
+  const handleFormSubmit = useCallback(
     async (e) => {
       e.preventDefault();
-      if (formRef.current.reportValidity()) {
+      if (e.target.reportValidity()) {
         const pin = async (blob, filename) => {
           const formData = new FormData();
           formData.append('file', blob, filename);
-          const res = await axios.post(
-            `${new URL('/api/ipfs/pin', process.env.NEXT_PUBLIC_API_URL)}`,
-            formData,
-          );
-          return res.data.cid;
+          const { cid } = await axios
+            .post(
+              `${new URL('ipfs/pin', process.env.NEXT_PUBLIC_API_BASE_URL)}`,
+              formData,
+            )
+            .then((res) => res.data);
+          return cid;
         };
         try {
           setIsCreating(true);
 
-          const parametersCid = await pin(
+          if (
+            projectParameters.length >
+            Number(process.env.NEXT_PUBLIC_MAX_NUM_PROJECT_PARAMETERS)
+          ) {
+            throw new Error(
+              `Exceed the maximum of project parameters: ${Number(
+                process.env.NEXT_PUBLIC_MAX_NUM_PROJECT_PARAMETERS,
+              )}`,
+            );
+          }
+          if (
+            new Set(projectParameters.map((param) => param.key)).size <
+            projectParameters.length
+          ) {
+            throw new Error('Duplicate parameter keys');
+          }
+
+          const projectParametersCid = await pin(
             new Blob(
               [
                 JSON.stringify(
-                  parameters.map((p) => ({
-                    key: p.key,
-                    type: p.type,
-                    name: p.name,
-                    defaultValue: p.defaultValue,
+                  projectParameters.map((param) => ({
+                    key: param.key,
+                    type: param.type,
+                    name: param.name,
+                    defaultValue: param.defaultValue,
                   })),
                 ),
               ],
@@ -235,8 +263,8 @@ const CreatePage = () => {
 
           const project = {
             author: signerAddress,
-            codeCid,
-            parametersCid,
+            codeCid: projectCodeCid,
+            parametersCid: projectParametersCid,
             name: formValueByName.name,
             description: formValueByName.description,
             license: formValueByName.license,
@@ -244,31 +272,21 @@ const CreatePage = () => {
               `${formValueByName.price}`,
             ),
             maxNumEditions:
-              formValueByName.isLimitedEdition === 'YES'
-                ? ethers.BigNumber.from(formValueByName.maxNumEditions)
-                : ethers.BigNumber.from(
+              formValueByName.isLimitedEdition === 'NO'
+                ? ethers.BigNumber.from(
                     '115792089237316195423570985008687907853269984665640564039457584007913129639935',
-                  ),
+                  )
+                : ethers.BigNumber.from(formValueByName.maxNumEditions),
           };
 
           // TODO: Let users customize token names and descriptions?
           const token = {
             name: `${project.name}`,
             description: `${project.description}`,
-            animation_url: `${new URL(
-              `https://${
-                project.codeCid
-              }.ipfs.dweb.link?address=${encodeURIComponent(
-                signerAddress,
-              )}${parameters.reduce(
-                (prev, { key: k, defaultValue: v }) =>
-                  `${prev}&${encodeURIComponent(k)}=${encodeURIComponent(v)}`,
-                '',
-              )}`,
-            )}`,
-            attributes: parameters.map((p) => ({
-              trait_type: p.name,
-              value: p.defaultValue,
+            animation_url: tokenPreviewUrl,
+            attributes: projectParameters.map((param) => ({
+              trait_type: param.name,
+              value: param.defaultValue,
             })),
           };
           const tokenCid = await pin(
@@ -291,6 +309,7 @@ const CreatePage = () => {
               { value: project.pricePerTokenInWei },
             );
 
+          // TODO: Show transaction status toast
           router.push('/projects');
         } catch (err) {
           // TODO:
@@ -305,8 +324,8 @@ const CreatePage = () => {
       state.eth.nfc,
       state.eth.signer,
       signerAddress,
-      parameters,
-      codeCid,
+      projectParameters,
+      projectCodeCid,
       formValueByName.name,
       formValueByName.description,
       formValueByName.license,
@@ -350,23 +369,10 @@ const CreatePage = () => {
             ]}
           >
             <iframe
-              ref={iframeRef}
               src={
                 isUploading
                   ? '/iframes/uploading'
-                  : codeCid
-                  ? `${new URL(
-                      `https://${codeCid}.ipfs.dweb.link?address=${encodeURIComponent(
-                        signerAddress,
-                      )}${parameters.reduce(
-                        (prev, { key: k, defaultValue: v }) =>
-                          `${prev}&${encodeURIComponent(
-                            k,
-                          )}=${encodeURIComponent(v)}`,
-                        '',
-                      )}`,
-                    )}`
-                  : '/iframes/please-upload'
+                  : tokenPreviewUrl || '/iframes/please-upload'
               }
               allow="accelerometer; autoplay; encrypted-media; fullscreen; gyroscope; picture-in-picture"
               sandbox="allow-scripts"
@@ -400,21 +406,45 @@ const CreatePage = () => {
               tw`sm:(px-8 pt-32)`,
             ]}
           >
-            <form ref={formRef}>
+            <form onSubmit={handleFormSubmit}>
               <div css={[tw`rounded-xl`, tw`shadow-lg`]}>
                 <div css={[tw`p-8`]}>
-                  <Field>
-                    <label htmlFor="code">Code</label>
+                  <>
+                    <label
+                      css={[
+                        tw`px-6 py-4`,
+                        tw`bg-black`,
+                        tw`text-white font-bold`,
+                        tw`rounded-full`,
+                        tw`shadow-lg`,
+                        isUploading
+                          ? tw`cursor-not-allowed`
+                          : tw`cursor-pointer`,
+                        tw`focus:outline-none`,
+                        ...(isUploading ? [] : liftWhenHoverMixin),
+                        tw`inline-block`,
+                        tw`my-4`,
+                      ]}
+                      htmlFor="code"
+                    >
+                      {isUploading ? (
+                        <LoaderIcon tw="animate-spin" />
+                      ) : (
+                        'Upload a Folder'
+                      )}
+                    </label>
                     <input
                       ref={codeFileInputRef}
                       id="code"
                       type="file"
                       name="code"
                       webkitdirectory="true"
-                      onChange={handleCodeFileInputChange}
+                      onChange={handleFormCodeFileInputChange}
                       required
+                      disabled={isUploading}
+                      hidden
                     />
-                  </Field>
+                  </>
                   <Field>
                     <label htmlFor="name">Name</label>
                     <input
@@ -424,6 +454,7 @@ const CreatePage = () => {
                       value={formValueByName.name}
                       onChange={handleFormInputChange}
                       required
+                      placeholder="Give your NFC a dope name!"
                     />
                   </Field>
                   <Field>
@@ -441,20 +472,11 @@ const CreatePage = () => {
                       rows="3"
                       maxLength="1000"
                       required
+                      placeholder="What's your project? Why is it cool? Does it have any customizable parameters? How to specify them?"
                     />
                   </Field>
                   <Field>
-                    <label htmlFor="license">License</label>
-                    <input
-                      id="license"
-                      type="text"
-                      name="license"
-                      value={formValueByName.license}
-                      onChange={handleFormInputChange}
-                    />
-                  </Field>
-                  <Field>
-                    <label htmlFor="maxNumEditions">Max # of Editions</label>
+                    <label htmlFor="maxNumEditions">Editions</label>
                     <div css={[tw`flex`]}>
                       <select
                         css={[tw`flex-1`]}
@@ -484,7 +506,7 @@ const CreatePage = () => {
                     </div>
                   </Field>
                   <Field>
-                    <label htmlFor="price">Price</label>
+                    <label htmlFor="price">Price (ETH)</label>
                     <input
                       id="price"
                       type="number"
@@ -494,16 +516,28 @@ const CreatePage = () => {
                       min="0"
                       step="0.001"
                       required
+                      placeholder="0.001"
+                    />
+                  </Field>
+                  <Field>
+                    <label htmlFor="license">License</label>
+                    <input
+                      id="license"
+                      type="text"
+                      name="license"
+                      value={formValueByName.license}
+                      onChange={handleFormInputChange}
+                      placeholder="Go for NFT License or just leave it blank"
                     />
                   </Field>
                 </div>
               </div>
               <div css={[tw`mt-4`, tw`rounded-xl`, tw`shadow-lg`]}>
                 <div css={[tw`p-8`]}>
-                  <h3 css={[tw`mb-4`]}>Parameters</h3>
+                  <h3 css={[tw`mb-4`]}>Parameters (10 Max.)</h3>
                   <div css={[tw`mt-4`]}>
-                    {parameters.map((p) => (
-                      <React.Fragment key={p.id}>
+                    {projectParameters.map((param) => (
+                      <React.Fragment key={param.id}>
                         <div
                           css={[
                             tw`relative`,
@@ -522,7 +556,7 @@ const CreatePage = () => {
                               tw`focus:outline-none`,
                             ]}
                             type="button"
-                            onClick={handleRemoveParameterButtonClick(p.id)}
+                            onClick={handleRemoveParameterButtonClick(param.id)}
                           >
                             <XIcon size={14} />
                           </button>
@@ -531,38 +565,47 @@ const CreatePage = () => {
                           css={[tw`grid grid-cols-1 gap-2`, tw`sm:grid-cols-2`]}
                         >
                           <input
-                            id={`${p.id}__key`}
+                            id={`${param.id}__key`}
                             type="text"
-                            name={`${p.id}__key`}
-                            value={p.key}
-                            onChange={handleParameterFieldChange}
+                            name={`${param.id}__key`}
+                            value={param.key}
+                            onChange={handleParameterFieldChange(
+                              param.id,
+                              'key',
+                            )}
                             required
                             placeholder="key"
                           />
                           <select
-                            id={`${p.id}__type`}
+                            id={`${param.id}__type`}
                             type="text"
-                            name={`${p.id}__type`}
-                            value={p.type}
-                            onChange={handleParameterFieldChange}
+                            name={`${param.id}__type`}
+                            value={param.type}
+                            onChange={handleParameterFieldChange(
+                              param.id,
+                              'type',
+                            )}
                             required
                           >
                             <option value="STRING">string</option>
                             <option value="NUMBER">number</option>
                           </select>
                           <input
-                            id={`${p.id}__name`}
+                            id={`${param.id}__name`}
                             type="text"
-                            name={`${p.id}__name`}
-                            value={p.name}
-                            onChange={handleParameterFieldChange}
+                            name={`${param.id}__name`}
+                            value={param.name}
+                            onChange={handleParameterFieldChange(
+                              param.id,
+                              'name',
+                            )}
                             required
                             placeholder="name"
                           />
                           <input
-                            id={`${p.id}__defaultValue`}
+                            id={`${param.id}__defaultValue`}
                             type={(() => {
-                              switch (p.type) {
+                              switch (param.type) {
                                 case 'STRING': {
                                   return 'text';
                                 }
@@ -574,9 +617,12 @@ const CreatePage = () => {
                                 }
                               }
                             })()}
-                            name={`${p.id}__defaultValue`}
-                            value={p.defaultValue}
-                            onChange={handleParameterFieldChange}
+                            name={`${param.id}__defaultValue`}
+                            value={param.defaultValue}
+                            onChange={handleParameterFieldChange(
+                              param.id,
+                              'defaultValue',
+                            )}
                             required
                             placeholder="default value"
                           />
@@ -606,8 +652,17 @@ const CreatePage = () => {
                 </div>
               </div>
               <div css={[tw`flex justify-end items-center`, tw`my-8`]}>
-                <Button
+                <button
                   css={[
+                    tw`px-6 py-4`,
+                    tw`bg-black`,
+                    tw`text-white font-bold`,
+                    tw`rounded-full`,
+                    tw`shadow-lg`,
+                    tw`cursor-pointer`,
+                    isCreating ? tw`cursor-not-allowed` : tw`cursor-pointer`,
+                    tw`focus:outline-none`,
+                    ...(isCreating ? [] : liftWhenHoverMixin),
                     css`
                       background-color: #fbda61;
                       background-image: linear-gradient(
@@ -617,10 +672,10 @@ const CreatePage = () => {
                       );
                     `,
                   ]}
-                  onClick={handleCreateButtonClick}
+                  type="submit"
                 >
                   {isCreating ? <LoaderIcon tw="animate-spin" /> : 'Create'}
-                </Button>
+                </button>
               </div>
             </form>
           </div>

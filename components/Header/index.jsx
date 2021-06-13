@@ -95,12 +95,14 @@ const Header = ({ className }) => {
       ]}
     >
       <Link href="/">
-        <Image
-          css={[tw`cursor-pointer`]}
-          src="/NFC.svg"
-          width={100}
-          height={56}
-        />
+        <div>
+          <Image
+            css={[tw`cursor-pointer`]}
+            src="/NFC.svg"
+            width={100}
+            height={56}
+          />
+        </div>
       </Link>
       {router.pathname !== '/create' && (
         <TabBar>

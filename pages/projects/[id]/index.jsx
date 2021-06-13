@@ -3,7 +3,7 @@ import React, {
   useEffect,
   useState,
   useCallback,
-  useRef,
+  useMemo,
 } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -14,7 +14,6 @@ import {
   Image as ImageIcon,
   ExternalLink as ExternalLinkIcon,
 } from 'react-feather';
-import { v4 as uuidv4 } from 'uuid';
 import { ethers } from 'ethers';
 import axios from 'axios';
 
@@ -34,54 +33,81 @@ const ProjectPage = ({ project }) => {
 
   const [state, dispatch] = useContext(Context);
 
-  const formRef = useRef(null);
-
   const [signerAddress, setSignerAddress] = useState(null);
   useEffect(() => {
     const getSignerAddress = async () => {
-      const addr = await state.eth.signer.getAddress();
-      setSignerAddress(addr);
+      try {
+        const addr = await state.eth.signer.getAddress();
+        setSignerAddress(addr);
+      } catch (err) {
+        console.error(err);
+      }
     };
     if (state.eth.signer) {
       getSignerAddress();
     }
   }, [state?.eth?.signer]);
 
-  const [parameters, setParameters] = useState([]);
-  useEffect(() => {
-    if (project?.parameters) {
-      setParameters(
-        project.parameters.map((p) => ({
-          ...p,
-          value: p.defaultValue,
-        })),
-      );
-    }
-  }, [project?.parameters]);
-  const handleParameterFieldChange = useCallback((e) => {
-    setParameters((prev) => {
-      const nextParameters = [...prev];
-      const [id, name] = e.target.name.split('__');
-      const idx = nextParameters.findIndex((p) => p.id === id);
-      const nextParameter = {
-        ...nextParameters[idx],
-        [name]: e.target.value,
-      };
-      nextParameters.splice(idx, 1, nextParameter);
-      return nextParameters;
-    });
+  const projectParameterByKey = useMemo(
+    () =>
+      (project?.parameters &&
+        project.parameters.reduce(
+          (prev, param) => ({ ...prev, [param.key]: param }),
+          {},
+        )) ??
+      {},
+    [project?.parameters],
+  );
+  const defaultTokenArgumentByParameterKey = useMemo(
+    () =>
+      Object.entries(projectParameterByKey).reduce(
+        (prev, [paramKey, param]) => ({
+          ...prev,
+          [paramKey]: param.defaultValue,
+        }),
+        {},
+      ),
+    [projectParameterByKey],
+  );
+  const [tokenArgumentByParameterKey, setTokenArgumentByParameterKey] =
+    useState(defaultTokenArgumentByParameterKey);
+  const handleFormTokenArgumentInputChange = useCallback((e) => {
+    setTokenArgumentByParameterKey((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
   }, []);
 
+  const tokenPreviewUrl = useMemo(
+    () =>
+      project?.codeCid
+        ? `${new URL(
+            `/?${new URLSearchParams({
+              address: signerAddress,
+              ...Object.entries(tokenArgumentByParameterKey).reduce(
+                (prev, [paramKey, arg]) => ({
+                  ...prev,
+                  [paramKey]: arg,
+                }),
+                {},
+              ),
+            })}`,
+            `https://${project.codeCid}.ipfs.${process.env.NEXT_PUBLIC_IPFS_GATEWAY_DOMAIN}`,
+          )}`
+        : '',
+    [signerAddress, project?.codeCid, tokenArgumentByParameterKey],
+  );
+
   const [isMinting, setIsMinting] = useState(false);
-  const handleMintButtonClick = useCallback(
+  const handleFormSubmit = useCallback(
     async (e) => {
       e.preventDefault();
-      if (formRef.current.reportValidity()) {
+      if (e.target.reportValidity()) {
         const pin = async (blob, filename) => {
           const formData = new FormData();
           formData.append('file', blob, filename);
           const res = await axios.post(
-            `${new URL('/api/ipfs/pin', process.env.NEXT_PUBLIC_API_URL)}`,
+            `${new URL('ipfs/pin', process.env.NEXT_PUBLIC_API_BASE_URL)}`,
             formData,
           );
           return res.data.cid;
@@ -92,21 +118,13 @@ const ProjectPage = ({ project }) => {
           const token = {
             name: `${project.name}`,
             description: `${project.description}`,
-            animation_url: `${new URL(
-              `https://${
-                project.codeCid
-              }.ipfs.dweb.link?address=${encodeURIComponent(
-                signerAddress,
-              )}${parameters.reduce(
-                (prev, { key: k, value: v }) =>
-                  `${prev}&${encodeURIComponent(k)}=${encodeURIComponent(v)}`,
-                '',
-              )}`,
-            )}`,
-            attributes: parameters.map((p) => ({
-              trait_type: p.name,
-              value: p.value,
-            })),
+            animation_url: tokenPreviewUrl,
+            attributes: Object.entries(tokenArgumentByParameterKey).map(
+              ([paramKey, arg]) => ({
+                trait_type: projectParameterByKey[paramKey].name,
+                value: arg,
+              }),
+            ),
           };
           const tokenCid = await pin(
             new Blob([JSON.stringify(token)], { type: 'application/json' }),
@@ -114,10 +132,11 @@ const ProjectPage = ({ project }) => {
           );
           await state.eth.nfc
             .connect(state.eth.signer)
-            .mint(signerAddress, project.id, tokenCid, {
-              value: project.pricePerTokenInWei,
+            .mint(signerAddress, ethers.BigNumber.from(project.id), tokenCid, {
+              value: ethers.BigNumber.from(project.pricePerTokenInWei),
             });
 
+          // TODO: Show transaction status toast
           router.push('/tokens');
         } catch (err) {
           console.error(err);
@@ -131,11 +150,12 @@ const ProjectPage = ({ project }) => {
       signerAddress,
       state?.eth?.nfc,
       state?.eth?.signer,
-      parameters,
-      project?.id,
-      project?.codeCid,
+      tokenPreviewUrl,
       project?.name,
       project?.description,
+      tokenArgumentByParameterKey,
+      projectParameterByKey,
+      project?.id,
       project?.pricePerTokenInWei,
     ],
   );
@@ -173,17 +193,7 @@ const ProjectPage = ({ project }) => {
             tw`sm:(inset-x-8 top-32 bottom-16)`,
           ]}
         >
-          <iframe
-            src={`${new URL(
-              '/',
-              `https://${project.codeCid}.ipfs.dweb.link`,
-            )}?address=${encodeURIComponent(signerAddress)}${parameters.reduce(
-              (prev, { key: k, value: v }) =>
-                `${prev}&${encodeURIComponent(k)}=${encodeURIComponent(v)}`,
-              '',
-            )}`}
-            sandbox="allow-scripts"
-          />
+          <iframe src={tokenPreviewUrl} sandbox="allow-scripts" />
         </div>
       </div>
       <main css={[tw`container`, tw`mx-auto`, tw`px-4 py-8`]}>
@@ -196,7 +206,7 @@ const ProjectPage = ({ project }) => {
               {project.description}
             </p>
             <p css={[tw`mb-8`, tw`font-bold`]}>
-              Edition {project.nextSerial} of
+              Edition {project.numTokens} of
               <span css={[tw`block`, tw`text-5xl`]}>
                 {project.maxNumEditions ===
                 '115792089237316195423570985008687907853269984665640564039457584007913129639935'
@@ -233,48 +243,50 @@ const ProjectPage = ({ project }) => {
             </div>
           </div>
           <div css={[tw`col-span-1`, tw`xl:col-span-2`]}>
-            <form ref={formRef}>
+            <form onSubmit={handleFormSubmit}>
               <div css={[tw`rounded-xl`, tw`shadow-lg`]}>
                 <div css={[tw`p-8`, tw`border-b border-gray-200`]}>
-                  {parameters.length > 0
-                    ? parameters.map((p) => (
-                        <div key={p.id} css={[tw`not-first:mt-4`]}>
-                          <label htmlFor={`${p.id}__value`} css={[tw`block`]}>
-                            {p.name}
-                          </label>
-                          <input
-                            css={[
-                              tw`block`,
-                              tw`w-full`,
-                              tw`mt-1`,
-                              tw`p-2`,
-                              tw`border border-gray-200`,
-                              tw`rounded-xl`,
-                              tw`focus:(outline-none ring-2 ring-gray-200)`,
-                            ]}
-                            id={`${p.id}__value`}
-                            type={(() => {
-                              switch (p.type) {
-                                case 'STRING': {
-                                  return 'text';
+                  {Object.entries(projectParameterByKey).length > 0
+                    ? Object.entries(projectParameterByKey).map(
+                        ([paramKey, param]) => (
+                          <div key={paramKey} css={[tw`not-first:mt-4`]}>
+                            <label htmlFor={paramKey} css={[tw`block`]}>
+                              {param.name}
+                            </label>
+                            <input
+                              css={[
+                                tw`block`,
+                                tw`w-full`,
+                                tw`mt-1`,
+                                tw`p-2`,
+                                tw`border border-gray-200`,
+                                tw`rounded-xl`,
+                                tw`focus:(outline-none ring-2 ring-gray-200)`,
+                              ]}
+                              id={paramKey}
+                              type={(() => {
+                                switch (param.type) {
+                                  case 'STRING': {
+                                    return 'text';
+                                  }
+                                  case 'NUMBER': {
+                                    return 'number';
+                                  }
+                                  default: {
+                                    return 'text';
+                                  }
                                 }
-                                case 'NUMBER': {
-                                  return 'number';
-                                }
-                                default: {
-                                  return 'text';
-                                }
-                              }
-                            })()}
-                            name={`${p.id}__value`}
-                            value={p.value}
-                            onChange={handleParameterFieldChange}
-                            required
-                            placeholder={p.defaultValue}
-                          />
-                        </div>
-                      ))
-                    : `No parameters`}
+                              })()}
+                              name={paramKey}
+                              value={tokenArgumentByParameterKey[paramKey]}
+                              onChange={handleFormTokenArgumentInputChange}
+                              required
+                              placeholder={param.defaultValue}
+                            />
+                          </div>
+                        ),
+                      )
+                    : 'No parameters'}
                 </div>
                 <div css={[tw`p-8`]}>
                   <button
@@ -285,13 +297,34 @@ const ProjectPage = ({ project }) => {
                       tw`bg-black`,
                       tw`text-white text-center font-bold`,
                       tw`rounded-xl`,
-                      tw`cursor-pointer`,
+                      project.isPaused ||
+                      ethers.BigNumber.from(project.numTokens).gte(
+                        project.maxNumEditions,
+                      ) ||
+                      isMinting
+                        ? tw`cursor-not-allowed`
+                        : tw`cursor-pointer`,
                       tw`focus:outline-none`,
-                      ...liftWhenHoverMixin,
+                      ...(project.isPaused ||
+                      ethers.BigNumber.from(project.numTokens).gte(
+                        project.maxNumEditions,
+                      ) ||
+                      isMinting
+                        ? []
+                        : liftWhenHoverMixin),
                     ]}
-                    onClick={handleMintButtonClick}
+                    type="submit"
+                    disabled={
+                      project.isPaused ||
+                      ethers.BigNumber.from(project.numTokens).gte(
+                        project.maxNumEditions,
+                      ) ||
+                      isMinting
+                    }
                   >
-                    {isMinting ? (
+                    {project.isPaused ? (
+                      'Paused'
+                    ) : isMinting ? (
                       <LoaderIcon tw="animate-spin" />
                     ) : (
                       `Mint for Ξ${ethers.utils.formatEther(
@@ -311,65 +344,89 @@ const ProjectPage = ({ project }) => {
 };
 
 export async function getStaticPaths() {
-  const { NETWORK, ALCHEMY_API_KEY, NFC_ADDRESS } = process.env;
+  const { ALCHEMY_API_KEY } = process.env;
   const provider = new ethers.providers.AlchemyProvider(
-    NETWORK,
+    process.env.NEXT_PUBLIC_NETWORK,
     ALCHEMY_API_KEY,
   );
-  const nfc = new ethers.Contract(NFC_ADDRESS, nfcAbi, provider);
-  let res;
-  res = await nfc.numProjects();
-  let n = 0;
-  if (res.gt('1000')) {
-    n = 1000;
-  } else if (res.gt('0')) {
-    n = res.toNumber();
+  const nfc = new ethers.Contract(
+    process.env.NEXT_PUBLIC_NFC_ADDRESS,
+    nfcAbi,
+    provider,
+  );
+
+  const numProjects = await nfc.numProjects();
+  let numProjectsToBuildFirst = 0;
+  let offset = ethers.BigNumber.from(0);
+  if (numProjects.gt('1000')) {
+    numProjectsToBuildFirst = 1000;
+    offset = numProjects.sub('1000');
+  } else if (numProjects.gt('0')) {
+    numProjectsToBuildFirst = numProjects.toNumber();
   }
+  const projectIds = new Array(numProjectsToBuildFirst)
+    .fill(null)
+    .map((_, idx) => offset.add(idx));
   return {
-    paths: new Array(n)
-      .fill(null)
-      .map((_, idx) => ({ params: { id: `${idx}` } })),
+    paths: projectIds.map((id) => ({ params: { id: id.toString() } })),
     fallback: true,
   };
 }
 
 export async function getStaticProps({ params }) {
-  const { NETWORK, ALCHEMY_API_KEY, NFC_ADDRESS } = process.env;
-  const provider = new ethers.providers.AlchemyProvider(
-    NETWORK,
-    ALCHEMY_API_KEY,
-  );
-  const nfc = new ethers.Contract(NFC_ADDRESS, nfcAbi, provider);
-  let res;
-  res = await nfc.project(params.id);
-  const project = res;
-  res = await axios.get(`https://ipfs.io/ipfs/${project.parametersCid}`);
-  const parameters = res.data;
-  res = await nfc.tokenIdsByProjectId(params.id);
-  const nextSerial = res.length + 1;
+  const { ALCHEMY_API_KEY } = process.env;
 
-  return {
-    props: {
-      project: {
-        id: params.id,
-        author: project.author,
-        codeCid: project.codeCid,
-        parametersCid: project.parametersCid,
-        name: project.name,
-        description: project.description,
-        license: project.license,
-        pricePerTokenInWei: project.pricePerTokenInWei.toString(),
-        maxNumEditions: project.maxNumEditions.toString(),
-        isPaused: project.isPaused,
-        parameters: parameters.map((p) => ({
-          ...p,
-          id: uuidv4(),
-        })),
-        nextSerial,
+  try {
+    const provider = new ethers.providers.AlchemyProvider(
+      process.env.NEXT_PUBLIC_NETWORK,
+      ALCHEMY_API_KEY,
+    );
+    const nfc = new ethers.Contract(
+      process.env.NEXT_PUBLIC_NFC_ADDRESS,
+      nfcAbi,
+      provider,
+    );
+
+    const projectId = params.id;
+
+    const project = await nfc.project(ethers.BigNumber.from(projectId));
+
+    const projectParameters = await axios
+      .get(
+        `${new URL(
+          `/ipfs/${project.parametersCid}`,
+          `https://${process.env.NEXT_PUBLIC_IPFS_GATEWAY_DOMAIN}`,
+        )}`,
+      )
+      .then((res) => res.data);
+    const projectTokenIds = await nfc.tokenIdsByProjectId(projectId);
+    const projectNumTokens = projectTokenIds.length;
+
+    return {
+      props: {
+        project: {
+          id: projectId,
+          author: project.author,
+          codeCid: project.codeCid,
+          parameters: projectParameters,
+          name: project.name,
+          description: project.description,
+          license: project.license,
+          pricePerTokenInWei: project.pricePerTokenInWei.toString(),
+          maxNumEditions: project.maxNumEditions.toString(),
+          isPaused: project.isPaused,
+          numTokens: projectNumTokens,
+        },
       },
-    },
-    revalidate: 1,
-  };
+      revalidate: 10,
+    };
+  } catch (err) {
+    console.error(err);
+    return {
+      notFound: true,
+      revalidate: 10,
+    };
+  }
 }
 
 export default ProjectPage;

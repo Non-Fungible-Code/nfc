@@ -24,13 +24,25 @@ const Footer = ({ className }) => {
           `,
         ]}
       >
-        <Link href="https://twitter.com/nf_code" target="_blank">
+        <Link
+          href="https://twitter.com/nf_code"
+          target="_blank"
+          rel="noreferrer"
+        >
           Twitter
         </Link>
-        <Link href="https://discord.gg/HqSxPknrRd" target="_blank">
+        <Link
+          href="https://discord.gg/HqSxPknrRd"
+          target="_blank"
+          rel="noreferrer"
+        >
           Discord
         </Link>
-        <Link href="https://github.com/Non-Fungible-Code" target="_blank">
+        <Link
+          href="https://github.com/Non-Fungible-Code"
+          target="_blank"
+          rel="noreferrer"
+        >
           Github
         </Link>
       </div>
@@ -45,10 +57,14 @@ const Footer = ({ className }) => {
           `,
         ]}
       >
-        <Link href="https://docs.nfcode.art/" target="_blank">
+        <Link href="https://docs.nfcode.art/" target="_blank" rel="noreferrer">
           About
         </Link>
-        <Link href="https://docs.nfcode.art/faqs" target="_blank">
+        <Link
+          href="https://docs.nfcode.art/faqs"
+          target="_blank"
+          rel="noreferrer"
+        >
           Help
         </Link>
       </div>

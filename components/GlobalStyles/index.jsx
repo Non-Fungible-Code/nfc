@@ -7,6 +7,10 @@ const CustomStyles = createGlobalStyle`
     ${tw`antialiased`}
     font-family: 'Montserrat', sans-serif;
   }
+
+  .bn-onboard-modal {
+    z-index: 99
+  }
 `;
 
 const GlobalStyles = () => (

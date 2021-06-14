@@ -3,17 +3,17 @@ module.exports = {
   future: { webpack5: true },
   webpack: (config) => {
     // Unset client-side javascript that only works server-side
-    config.resolve.fallback = { fs: false, module: false };
+    config.resolve.fallback = {
+      fs: false,
+      module: false,
+      // Polyfill the node modules required by bnc-onboard
+      crypto: require.resolve('crypto-browserify'),
+      stream: require.resolve('stream-browserify'),
+      http: require.resolve('stream-http'),
+      https: require.resolve('https-browserify'),
+      os: require.resolve('os-browserify/browser'),
+    };
 
     return config;
   },
-  // webpack: (config, { isServer }) => {
-  //   if (!isServer) {
-  //     // Unset client-side javascript that only works server-side
-  //     // https://github.com/vercel/next.js/issues/7755#issuecomment-508633125
-  //     config.node = { fs: 'empty', module: 'empty' };
-  //   }
-
-  //   return config;
-  // },
 };

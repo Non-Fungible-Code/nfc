@@ -94,13 +94,13 @@ const ProjectsPage = ({ projects: initialProjects }) => {
       </Head>
 
       <Header />
-      <main css={[tw`container`, tw`mx-auto`, tw`px-4 pt-16`]}>
+      <main css={[tw`container`, tw`mx-auto`, tw`px-4 pt-12`, tw`sm:pt-16`]}>
         {!projects ? (
           <div>Loading...</div>
         ) : (
           <div
             css={[
-              tw`grid grid-cols-1 gap-2`,
+              tw`grid grid-cols-1 gap-4`,
               tw`sm:(grid-cols-3 gap-4)`,
               tw`xl:(grid-cols-4 gap-8)`,
             ]}

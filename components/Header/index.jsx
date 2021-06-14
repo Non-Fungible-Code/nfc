@@ -8,17 +8,6 @@ import { Menu as MenuIcon } from 'react-feather';
 import { Context } from '../../pages/_app';
 import { liftWhenHoverMixin } from '../../utils/style';
 
-const Button = styled.button(() => [
-  tw`px-6 py-4`,
-  tw`bg-black`,
-  tw`text-white font-bold`,
-  tw`rounded-full`,
-  tw`shadow-lg`,
-  tw`cursor-pointer`,
-  tw`focus:outline-none`,
-  ...liftWhenHoverMixin,
-]);
-
 const TabBar = styled.div(() => [
   tw`hidden`,
   tw`absolute left-1/2`,
@@ -64,23 +53,17 @@ const Header = ({ className }) => {
     if (state.eth.signer) {
       getSignerAddress();
     }
-  }, [state.eth.signer]);
+  }, [state?.eth?.signer]);
 
   const handleConnectButtonClick = useCallback(async () => {
-    if (state.eth.provider) {
-      await window.ethereum.request({ method: 'eth_requestAccounts' });
-      const accounts = await window.ethereum.request({
-        method: 'eth_accounts',
-      });
-      const signer = state.eth.provider.getSigner(accounts[0]);
-      dispatch({
-        type: 'SET_ETHERSJS_SIGNER',
-        payload: {
-          signer,
-        },
-      });
+    if (state.eth.onboard) {
+      // state.eth.onboard.walletReset();
+      const isWalletSelected = await state.eth.onboard.walletSelect();
+      if (isWalletSelected) {
+        await state.eth.onboard.walletCheck();
+      }
     }
-  }, [dispatch, state.eth.provider]);
+  }, [state?.eth?.onboard]);
 
   return (
     <header
@@ -126,9 +109,10 @@ const Header = ({ className }) => {
       >
         {signerAddress && router.pathname !== '/create' && (
           <Link href="/create">
-            <Button
+            <button
               css={[
                 tw`hidden`,
+                tw`px-6 py-4`,
                 css`
                   background-color: #fbda61;
                   background-image: linear-gradient(
@@ -137,16 +121,34 @@ const Header = ({ className }) => {
                     #ff5acd 100%
                   );
                 `,
+                tw`text-white font-bold`,
+                tw`rounded-full`,
+                tw`shadow-lg`,
+                tw`cursor-pointer`,
+                tw`focus:outline-none`,
+                ...liftWhenHoverMixin,
                 tw`sm:block`,
               ]}
+              type="button"
             >
               Create
-            </Button>
+            </button>
           </Link>
         )}
         {signerAddress ? (
-          <Button
-            css={[tw`p-1.5`, tw`bg-white`, tw`text-black`, tw`sm:(px-6 py-4)`]}
+          <button
+            css={[
+              tw`p-1.5`,
+              tw`bg-white`,
+              tw`text-black font-bold`,
+              tw`rounded-full`,
+              tw`shadow-lg`,
+              tw`cursor-pointer`,
+              tw`focus:outline-none`,
+              ...liftWhenHoverMixin,
+              tw`sm:(px-6 py-4)`,
+            ]}
+            type="button"
           >
             <div
               css={[
@@ -164,11 +166,39 @@ const Header = ({ className }) => {
                 signerAddress.length - 4,
               )}`}
             </span>
-          </Button>
+          </button>
         ) : (
-          <Button onClick={handleConnectButtonClick}>Connect</Button>
+          <button
+            css={[
+              tw`px-6 py-4`,
+              tw`bg-black`,
+              tw`text-white font-bold`,
+              tw`rounded-full`,
+              tw`shadow-lg`,
+              tw`cursor-pointer`,
+              tw`focus:outline-none`,
+              ...liftWhenHoverMixin,
+            ]}
+            onClick={handleConnectButtonClick}
+            type="button"
+          >
+            Connect
+          </button>
         )}
-        <Button css={[tw`p-1.5`, tw`bg-white`, tw`text-black`, tw`sm:hidden`]}>
+        <button
+          css={[
+            tw`p-1.5`,
+            tw`bg-white`,
+            tw`text-black font-bold`,
+            tw`rounded-full`,
+            tw`shadow-lg`,
+            tw`cursor-pointer`,
+            tw`focus:outline-none`,
+            ...liftWhenHoverMixin,
+            tw`sm:hidden`,
+          ]}
+          type="button"
+        >
           <div
             css={[
               tw`flex justify-center items-center`,
@@ -181,7 +211,7 @@ const Header = ({ className }) => {
           >
             <MenuIcon />
           </div>
-        </Button>
+        </button>
       </div>
     </header>
   );

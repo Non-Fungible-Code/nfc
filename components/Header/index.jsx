@@ -44,17 +44,6 @@ const Header = ({ className }) => {
   const router = useRouter();
   const [state, dispatch] = useContext(Context);
 
-  const [signerAddress, setSignerAddress] = useState(null);
-  useEffect(() => {
-    const getSignerAddress = async () => {
-      const addr = await state.eth.signer.getAddress();
-      setSignerAddress(addr);
-    };
-    if (state.eth.signer) {
-      getSignerAddress();
-    }
-  }, [state?.eth?.signer]);
-
   const handleConnectButtonClick = useCallback(async () => {
     if (state.eth.onboard) {
       // state.eth.onboard.walletReset();
@@ -107,7 +96,7 @@ const Header = ({ className }) => {
           `,
         ]}
       >
-        {signerAddress && router.pathname !== '/create' && (
+        {state?.eth?.signerAddress && router.pathname !== '/create' && (
           <Link href="/create">
             <button
               css={[
@@ -135,7 +124,7 @@ const Header = ({ className }) => {
             </button>
           </Link>
         )}
-        {signerAddress ? (
+        {state?.eth?.signerAddress ? (
           <button
             css={[
               tw`p-1.5`,
@@ -162,8 +151,11 @@ const Header = ({ className }) => {
               ]}
             />
             <span css={[tw`hidden`, tw`sm:inline`]}>
-              {`${signerAddress.slice(0, 6)}...${signerAddress.slice(
-                signerAddress.length - 4,
+              {`${state.eth.signerAddress.slice(
+                0,
+                6,
+              )}...${state.eth.signerAddress.slice(
+                state.eth.signerAddress.length - 4,
               )}`}
             </span>
           </button>

@@ -63,7 +63,6 @@ const fetchProjects = async (nfc) => {
     previewUrl: projectPreviewUrls[idx],
   }));
   result.reverse();
-  console.log(result);
   return result;
 };
 

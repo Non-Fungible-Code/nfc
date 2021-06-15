@@ -1,8 +1,7 @@
-import React, { useContext, useEffect, useState, useCallback } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import Error from 'next/error';
 import tw, { css, styled } from 'twin.macro';
 import {
   Globe as GlobeIcon,
@@ -10,7 +9,6 @@ import {
   Code as CodeIcon,
   ExternalLink as ExternalLinkIcon,
 } from 'react-feather';
-import { v4 as uuidv4 } from 'uuid';
 import { ethers } from 'ethers';
 import axios from 'axios';
 
@@ -29,17 +27,6 @@ const TokenPage = ({ token }) => {
   const router = useRouter();
 
   const [state, dispatch] = useContext(Context);
-
-  const [signerAddress, setSignerAddress] = useState(null);
-  useEffect(() => {
-    const getSignerAddress = async () => {
-      const addr = await state.eth.signer.getAddress();
-      setSignerAddress(addr);
-    };
-    if (state.eth.signer) {
-      getSignerAddress();
-    }
-  }, [state?.eth?.signer]);
 
   if (router.isFallback) {
     return <div>Loading...</div>;

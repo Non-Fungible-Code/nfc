@@ -2,7 +2,6 @@ import React, {
   useState,
   useCallback,
   useContext,
-  useEffect,
   useRef,
   useMemo,
 } from 'react';
@@ -59,17 +58,6 @@ const CreatePage = () => {
   const router = useRouter();
 
   const codeFileInputRef = useRef(null);
-
-  const [signerAddress, setSignerAddress] = useState('');
-  useEffect(() => {
-    const getSignerAddress = async () => {
-      const addr = await state.eth.signer.getAddress();
-      setSignerAddress(addr);
-    };
-    if (state.eth.signer) {
-      getSignerAddress();
-    }
-  }, [state?.eth?.signer]);
 
   const [isUploading, setIsUploading] = useState(false);
   const [projectCodeCid, setProjectCodeCid] = useState('');
@@ -190,10 +178,10 @@ const CreatePage = () => {
 
   const tokenPreviewUrl = useMemo(
     () =>
-      projectCodeCid
+      projectCodeCid && state?.eth?.signerAddress
         ? `${new URL(
             `/?${new URLSearchParams({
-              address: signerAddress,
+              address: state.eth.signerAddress,
               ...projectParameters.reduce(
                 (prev, param) => ({
                   ...prev,
@@ -205,7 +193,7 @@ const CreatePage = () => {
             `https://${projectCodeCid}.ipfs.${process.env.NEXT_PUBLIC_IPFS_GATEWAY_DOMAIN}`,
           )}`
         : '',
-    [projectCodeCid, signerAddress, projectParameters],
+    [projectCodeCid, state?.eth?.signerAddress, projectParameters],
   );
 
   const [isCreating, setIsCreating] = useState(false);
@@ -262,7 +250,7 @@ const CreatePage = () => {
           );
 
           const project = {
-            author: signerAddress,
+            author: state.eth.signerAddress,
             codeCid: projectCodeCid,
             parametersCid: projectParametersCid,
             name: formValueByName.name,
@@ -323,7 +311,7 @@ const CreatePage = () => {
       router,
       state.eth.nfc,
       state.eth.signer,
-      signerAddress,
+      state?.eth?.signerAddress,
       projectParameters,
       projectCodeCid,
       formValueByName.name,
@@ -371,8 +359,8 @@ const CreatePage = () => {
             <iframe
               src={
                 isUploading
-                  ? '/iframes/uploading'
-                  : tokenPreviewUrl || '/iframes/please-upload'
+                  ? '/misc/uploading'
+                  : tokenPreviewUrl || '/misc/please-upload'
               }
               allow="accelerometer; autoplay; encrypted-media; fullscreen; gyroscope; picture-in-picture"
               sandbox="allow-scripts"
@@ -655,26 +643,37 @@ const CreatePage = () => {
                 <button
                   css={[
                     tw`px-6 py-4`,
-                    tw`bg-black`,
+                    !state?.eth?.signerAddress
+                      ? tw`bg-gray-300`
+                      : css`
+                          background-color: #fbda61;
+                          background-image: linear-gradient(
+                            45deg,
+                            #fbda61 0%,
+                            #ff5acd 100%
+                          );
+                        `,
                     tw`text-white font-bold`,
                     tw`rounded-full`,
                     tw`shadow-lg`,
                     tw`cursor-pointer`,
-                    isCreating ? tw`cursor-not-allowed` : tw`cursor-pointer`,
+                    !state?.eth?.signerAddress || isCreating
+                      ? tw`cursor-not-allowed`
+                      : tw`cursor-pointer`,
                     tw`focus:outline-none`,
-                    ...(isCreating ? [] : liftWhenHoverMixin),
-                    css`
-                      background-color: #fbda61;
-                      background-image: linear-gradient(
-                        45deg,
-                        #fbda61 0%,
-                        #ff5acd 100%
-                      );
-                    `,
+                    ...(!state?.eth?.signerAddress || isCreating
+                      ? []
+                      : liftWhenHoverMixin),
                   ]}
                   type="submit"
                 >
-                  {isCreating ? <LoaderIcon tw="animate-spin" /> : 'Create'}
+                  {!state?.eth?.signerAddress ? (
+                    'Please Connect First'
+                  ) : isCreating ? (
+                    <LoaderIcon tw="animate-spin" />
+                  ) : (
+                    'Create'
+                  )}
                 </button>
               </div>
             </form>

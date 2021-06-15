@@ -1,10 +1,4 @@
-import React, {
-  useContext,
-  useEffect,
-  useState,
-  useCallback,
-  useMemo,
-} from 'react';
+import React, { useContext, useState, useCallback, useMemo } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -32,21 +26,6 @@ const ProjectPage = ({ project }) => {
   const router = useRouter();
 
   const [state, dispatch] = useContext(Context);
-
-  const [signerAddress, setSignerAddress] = useState(null);
-  useEffect(() => {
-    const getSignerAddress = async () => {
-      try {
-        const addr = await state.eth.signer.getAddress();
-        setSignerAddress(addr);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    if (state.eth.signer) {
-      getSignerAddress();
-    }
-  }, [state?.eth?.signer]);
 
   const projectParameterByKey = useMemo(
     () =>
@@ -80,10 +59,10 @@ const ProjectPage = ({ project }) => {
 
   const tokenPreviewUrl = useMemo(
     () =>
-      project?.codeCid
+      project?.codeCid && state?.eth?.signerAddress
         ? `${new URL(
             `/?${new URLSearchParams({
-              address: signerAddress,
+              address: state.eth.signerAddress,
               ...Object.entries(tokenArgumentByParameterKey).reduce(
                 (prev, [paramKey, arg]) => ({
                   ...prev,
@@ -95,7 +74,7 @@ const ProjectPage = ({ project }) => {
             `https://${project.codeCid}.ipfs.${process.env.NEXT_PUBLIC_IPFS_GATEWAY_DOMAIN}`,
           )}`
         : '',
-    [signerAddress, project?.codeCid, tokenArgumentByParameterKey],
+    [project?.codeCid, state?.eth?.signerAddress, tokenArgumentByParameterKey],
   );
 
   const [isMinting, setIsMinting] = useState(false);
@@ -132,9 +111,14 @@ const ProjectPage = ({ project }) => {
           );
           await state.eth.nfc
             .connect(state.eth.signer)
-            .mint(signerAddress, ethers.BigNumber.from(project.id), tokenCid, {
-              value: ethers.BigNumber.from(project.pricePerTokenInWei),
-            });
+            .mint(
+              state.eth.signerAddress,
+              ethers.BigNumber.from(project.id),
+              tokenCid,
+              {
+                value: ethers.BigNumber.from(project.pricePerTokenInWei),
+              },
+            );
 
           // TODO: Show transaction status toast
           router.push('/tokens');
@@ -147,9 +131,9 @@ const ProjectPage = ({ project }) => {
     },
     [
       router,
-      signerAddress,
       state?.eth?.nfc,
       state?.eth?.signer,
+      state?.eth?.signerAddress,
       tokenPreviewUrl,
       project?.name,
       project?.description,
@@ -193,7 +177,10 @@ const ProjectPage = ({ project }) => {
             tw`sm:(inset-x-8 top-32 bottom-16)`,
           ]}
         >
-          <iframe src={tokenPreviewUrl} sandbox="allow-scripts" />
+          <iframe
+            src={tokenPreviewUrl || '/misc/please-connect'}
+            sandbox="allow-scripts"
+          />
         </div>
       </div>
       <main css={[tw`container`, tw`mx-auto`, tw`px-4 py-8`]}>
@@ -294,9 +281,16 @@ const ProjectPage = ({ project }) => {
                       tw`flex justify-center items-center`,
                       tw`w-full`,
                       tw`px-8 py-4`,
-                      tw`bg-black`,
+                      !state?.eth?.signerAddress ||
+                      project.isPaused ||
+                      ethers.BigNumber.from(project.numTokens).gte(
+                        project.maxNumEditions,
+                      )
+                        ? tw`bg-gray-300`
+                        : tw`bg-black`,
                       tw`text-white text-center font-bold`,
                       tw`rounded-xl`,
+                      !state?.eth?.signerAddress ||
                       project.isPaused ||
                       ethers.BigNumber.from(project.numTokens).gte(
                         project.maxNumEditions,
@@ -305,7 +299,8 @@ const ProjectPage = ({ project }) => {
                         ? tw`cursor-not-allowed`
                         : tw`cursor-pointer`,
                       tw`focus:outline-none`,
-                      ...(project.isPaused ||
+                      ...(!state?.eth?.signerAddress ||
+                      project.isPaused ||
                       ethers.BigNumber.from(project.numTokens).gte(
                         project.maxNumEditions,
                       ) ||
@@ -315,6 +310,7 @@ const ProjectPage = ({ project }) => {
                     ]}
                     type="submit"
                     disabled={
+                      !state?.eth?.signerAddress ||
                       project.isPaused ||
                       ethers.BigNumber.from(project.numTokens).gte(
                         project.maxNumEditions,
@@ -322,7 +318,9 @@ const ProjectPage = ({ project }) => {
                       isMinting
                     }
                   >
-                    {project.isPaused ? (
+                    {!state?.eth?.signerAddress ? (
+                      'Please Connect First'
+                    ) : project.isPaused ? (
                       'Paused'
                     ) : isMinting ? (
                       <LoaderIcon tw="animate-spin" />

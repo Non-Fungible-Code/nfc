@@ -51,7 +51,6 @@ const fetchTokens = async (nfc) => {
     owner: tokenOwners[idx],
   }));
   result.reverse();
-  console.log(result);
   return result;
 };
 

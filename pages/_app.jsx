@@ -23,6 +23,7 @@ const initialState = {
     wallet: null,
     provider: null,
     signer: null,
+    signerAddress: '',
     nfc: null,
   },
   ipfs: {
@@ -72,6 +73,16 @@ const reducer = (state, action) => {
         },
       };
     }
+    case 'SET_ETH_SIGNER_ADDRESS': {
+      const { signerAddress } = action.payload;
+      return {
+        ...state,
+        eth: {
+          ...state.eth,
+          signerAddress,
+        },
+      };
+    }
     case 'SET_ETH_NFC': {
       const { nfc } = action.payload;
       return {
@@ -108,9 +119,15 @@ const App = ({ Component, pageProps }) => {
       networkId: NETWORK_ID,
       subscriptions: {
         address: (addr) => {
-          // TODO:
+          dispatch({
+            type: 'SET_ETH_SIGNER_ADDRESS',
+            payload: {
+              signerAddress: addr ?? '',
+            },
+          });
         },
         network: (networkId) => {
+          console.log('networkId:', networkId);
           if (networkId !== NETWORK_ID) {
             // TODO:
             throw new Error('Wrong network');

@@ -360,6 +360,8 @@ const CreatePage = () => {
               src={
                 isUploading
                   ? '/misc/uploading'
+                  : !state?.eth?.signerAddress
+                  ? '/misc/please-connect'
                   : tokenPreviewUrl || '/misc/please-upload'
               }
               allow="accelerometer; autoplay; encrypted-media; fullscreen; gyroscope; picture-in-picture"

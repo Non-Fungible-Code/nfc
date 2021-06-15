@@ -1,5 +1,14 @@
 import Head from 'next/head';
-import React, { useReducer, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import React, {
+  useReducer,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+} from 'react';
+import ReactDom from 'react-dom';
+import tw, { css, styled } from 'twin.macro';
 import { ethers } from 'ethers';
 import ipfs from 'ipfs';
 import BncOnboard from 'bnc-onboard';
@@ -28,6 +37,10 @@ const initialState = {
   },
   ipfs: {
     node: null,
+  },
+  ui: {
+    isModalOpen: false,
+    isMenuModalOpen: false,
   },
 };
 
@@ -103,14 +116,46 @@ const reducer = (state, action) => {
         },
       };
     }
+    case 'SET_UI_IS_MENU_MODAL_OPEN': {
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          isMenuModalOpen: action.payload,
+        },
+      };
+    }
+    case 'TOGGLE_UI_IS_MENU_MODAL_OPEN': {
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          isMenuModalOpen: !state.ui.isMenuModalOpen,
+        },
+      };
+    }
     default: {
       return state;
     }
   }
 };
 
+const MenuModal = ({ children }) => {
+  const ref = useRef(null);
+
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    ref.current = document.querySelector('#menu-modal');
+    setIsMounted(true);
+  }, []);
+
+  return isMounted ? ReactDom.createPortal(children, ref.current) : null;
+};
+
 const App = ({ Component, pageProps }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
+
+  const router = useRouter();
 
   useEffect(() => {
     const onboard = BncOnboard({
@@ -244,6 +289,17 @@ const App = ({ Component, pageProps }) => {
     createIpfsNode();
   }, []);
 
+  const handleMenuItemClick = useCallback(
+    (pathname) => () => {
+      router.push(pathname);
+      dispatch({
+        type: 'SET_UI_IS_MENU_MODAL_OPEN',
+        payload: false,
+      });
+    },
+    [],
+  );
+
   return (
     <>
       <Head>
@@ -268,7 +324,48 @@ const App = ({ Component, pageProps }) => {
       </Head>
       <GlobalStyles />
       <Context.Provider value={[state, dispatch]}>
-        <Component {...pageProps} />
+        <div css={[state?.ui?.isMenuModalOpen && tw`h-screen overflow-hidden`]}>
+          <Component {...pageProps} />
+        </div>
+        {state?.ui?.isMenuModalOpen && (
+          <MenuModal>
+            <div
+              css={[tw`fixed`, tw`left-0 top-0 right-0 bottom-0`, tw`bg-black`]}
+            >
+              <div
+                css={[
+                  tw`w-full`,
+                  css`
+                    height: 88px;
+                  `,
+                ]}
+              />
+              <div
+                css={[
+                  tw`container`,
+                  tw`mx-auto`,
+                  tw`px-4 pt-12`,
+                  tw`text-white text-5xl`,
+                ]}
+              >
+                {[
+                  { name: 'All', pathname: '/projects' },
+                  { name: 'Curated', pathname: '/projects/curated' },
+                  { name: 'Gallery', pathname: '/tokens' },
+                  { name: 'Create', pathname: '/create' },
+                ].map(({ name, pathname }) => (
+                  <div
+                    css={[tw`py-2`]}
+                    key={pathname}
+                    onClick={handleMenuItemClick(pathname)}
+                  >
+                    {name}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </MenuModal>
+        )}
       </Context.Provider>
     </>
   );

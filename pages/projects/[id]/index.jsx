@@ -178,7 +178,11 @@ const ProjectPage = ({ project }) => {
           ]}
         >
           <iframe
-            src={tokenPreviewUrl || '/misc/please-connect'}
+            src={
+              !state?.eth?.signerAddress
+                ? '/misc/please-connect'
+                : tokenPreviewUrl
+            }
             sandbox="allow-scripts"
           />
         </div>

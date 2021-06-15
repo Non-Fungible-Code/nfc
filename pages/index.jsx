@@ -6,7 +6,7 @@ const HomePage = () => {
   const router = useRouter();
 
   useEffect(() => {
-    router.push('/projects');
+    router.replace('/projects');
   });
 
   return (

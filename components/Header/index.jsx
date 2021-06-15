@@ -1,12 +1,13 @@
-import React, { useContext, useCallback, useState, useEffect } from 'react';
+import React, { useContext, useCallback } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/router';
 import tw, { css, styled } from 'twin.macro';
-import { Menu as MenuIcon } from 'react-feather';
+import { Menu as MenuIcon, X as XIcon } from 'react-feather';
 
 import { Context } from '../../pages/_app';
 import { liftWhenHoverMixin } from '../../utils/style';
+
+import LogoSvg from '../../public/NFC.svg';
 
 const TabBar = styled.div(() => [
   tw`hidden`,
@@ -54,6 +55,12 @@ const Header = ({ className }) => {
     }
   }, [state?.eth?.onboard]);
 
+  const handleMenuButtonClick = useCallback(() => {
+    dispatch({
+      type: 'TOGGLE_UI_IS_MENU_MODAL_OPEN',
+    });
+  }, []);
+
   return (
     <header
       className={className}
@@ -67,14 +74,23 @@ const Header = ({ className }) => {
       ]}
     >
       <Link href="/">
-        <div>
-          <Image
-            css={[tw`cursor-pointer`]}
-            src="/NFC.svg"
-            width={100}
-            height={56}
-          />
-        </div>
+        <LogoSvg
+          css={[
+            tw`cursor-pointer`,
+            state?.ui?.isMenuModalOpen
+              ? css`
+                  .NFC_svg__cls-1 {
+                    fill: white;
+                  }
+                `
+              : css`
+                  .NFC_svg__cls-1 {
+                    fill: black;
+                  }
+                `,
+          ]}
+          width={100}
+        />
       </Link>
       {router.pathname !== '/create' && (
         <TabBar>
@@ -124,64 +140,67 @@ const Header = ({ className }) => {
             </button>
           </Link>
         )}
-        {state?.eth?.signerAddress ? (
-          <button
-            css={[
-              tw`p-1.5`,
-              tw`bg-white`,
-              tw`text-black font-bold`,
-              tw`rounded-full`,
-              tw`shadow-lg`,
-              tw`cursor-pointer`,
-              tw`focus:outline-none`,
-              ...liftWhenHoverMixin,
-              tw`sm:(px-6 py-4)`,
-            ]}
-            type="button"
-          >
-            <div
+        {!state?.ui?.isMenuModalOpen &&
+          (state?.eth?.signerAddress ? (
+            <button
               css={[
-                css`
-                  width: 44px;
-                  height: 44px;
-                `,
-                tw`bg-gradient-to-br from-purple-400 to-purple-900`,
+                tw`p-1.5`,
+                tw`bg-white`,
+                tw`text-black font-bold`,
                 tw`rounded-full`,
-                tw`sm:hidden`,
+                tw`shadow-lg`,
+                tw`cursor-pointer`,
+                tw`focus:outline-none`,
+                ...liftWhenHoverMixin,
+                tw`sm:(px-6 py-4)`,
               ]}
-            />
-            <span css={[tw`hidden`, tw`sm:inline`]}>
-              {`${state.eth.signerAddress.slice(
-                0,
-                6,
-              )}...${state.eth.signerAddress.slice(
-                state.eth.signerAddress.length - 4,
-              )}`}
-            </span>
-          </button>
-        ) : (
-          <button
-            css={[
-              tw`px-6 py-4`,
-              tw`bg-black`,
-              tw`text-white font-bold`,
-              tw`rounded-full`,
-              tw`shadow-lg`,
-              tw`cursor-pointer`,
-              tw`focus:outline-none`,
-              ...liftWhenHoverMixin,
-            ]}
-            onClick={handleConnectButtonClick}
-            type="button"
-          >
-            Connect
-          </button>
-        )}
+              type="button"
+            >
+              <div
+                css={[
+                  css`
+                    width: 44px;
+                    height: 44px;
+                  `,
+                  tw`bg-gradient-to-br from-purple-400 to-purple-900`,
+                  tw`rounded-full`,
+                  tw`sm:hidden`,
+                ]}
+              />
+              <span css={[tw`hidden`, tw`sm:inline`]}>
+                {`${state.eth.signerAddress.slice(
+                  0,
+                  6,
+                )}...${state.eth.signerAddress.slice(
+                  state.eth.signerAddress.length - 4,
+                )}`}
+              </span>
+            </button>
+          ) : (
+            <button
+              css={[
+                tw`px-6 py-4`,
+                tw`bg-black`,
+                tw`text-white font-bold`,
+                tw`rounded-full`,
+                tw`shadow-lg`,
+                tw`cursor-pointer`,
+                tw`focus:outline-none`,
+                ...liftWhenHoverMixin,
+              ]}
+              onClick={handleConnectButtonClick}
+              type="button"
+            >
+              Connect
+            </button>
+          ))}
         <button
           css={[
             tw`p-1.5`,
-            tw`bg-white`,
-            tw`text-black font-bold`,
+            state?.ui?.isMenuModalOpen
+              ? tw`bg-black text-white`
+              : tw`bg-white text-black`,
+            tw`font-bold`,
             tw`rounded-full`,
             tw`shadow-lg`,
             tw`cursor-pointer`,
@@ -190,6 +209,7 @@ const Header = ({ className }) => {
             tw`sm:hidden`,
           ]}
           type="button"
+          onClick={handleMenuButtonClick}
         >
           <div
             css={[
@@ -201,7 +221,7 @@ const Header = ({ className }) => {
               tw`rounded-full`,
             ]}
           >
-            <MenuIcon />
+            {state?.ui?.isMenuModalOpen ? <XIcon /> : <MenuIcon />}
           </div>
         </button>
       </div>

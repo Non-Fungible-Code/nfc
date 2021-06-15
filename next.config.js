@@ -14,6 +14,11 @@ module.exports = {
       os: require.resolve('os-browserify/browser'),
     };
 
+    config.module.rules.push({
+      test: /\.svg$/,
+      use: ['@svgr/webpack'],
+    });
+
     return config;
   },
 };

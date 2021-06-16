@@ -57,7 +57,7 @@ const Header = ({ className }) => {
 
   const handleMenuButtonClick = useCallback(() => {
     dispatch({
-      type: 'TOGGLE_UI_IS_MENU_MODAL_OPEN',
+      type: 'TOGGLE_UI_MENU_MODAL_IS_OPEN',
     });
   }, []);
 
@@ -74,23 +74,25 @@ const Header = ({ className }) => {
       ]}
     >
       <Link href="/">
-        <LogoSvg
-          css={[
-            tw`cursor-pointer`,
-            state?.ui?.isMenuModalOpen
-              ? css`
-                  .NFC_svg__cls-1 {
-                    fill: white;
-                  }
-                `
-              : css`
-                  .NFC_svg__cls-1 {
-                    fill: black;
-                  }
-                `,
-          ]}
-          width={100}
-        />
+        <div>
+          <LogoSvg
+            css={[
+              tw`cursor-pointer`,
+              state?.ui?.menuModal?.isOpen
+                ? css`
+                    .NFC_svg__cls-1 {
+                      fill: white;
+                    }
+                  `
+                : css`
+                    .NFC_svg__cls-1 {
+                      fill: black;
+                    }
+                  `,
+            ]}
+            width={100}
+          />
+        </div>
       </Link>
       {router.pathname !== '/create' && (
         <TabBar>
@@ -140,7 +142,7 @@ const Header = ({ className }) => {
             </button>
           </Link>
         )}
-        {!state?.ui?.isMenuModalOpen &&
+        {!state?.ui?.menuModal?.isOpen &&
           (state?.eth?.signerAddress ? (
             <button
               css={[
@@ -197,7 +199,7 @@ const Header = ({ className }) => {
         <button
           css={[
             tw`p-1.5`,
-            state?.ui?.isMenuModalOpen
+            state?.ui?.menuModal?.isOpen
               ? tw`bg-black text-white`
               : tw`bg-white text-black`,
             tw`font-bold`,
@@ -221,7 +223,7 @@ const Header = ({ className }) => {
               tw`rounded-full`,
             ]}
           >
-            {state?.ui?.isMenuModalOpen ? <XIcon /> : <MenuIcon />}
+            {state?.ui?.menuModal?.isOpen ? <XIcon /> : <MenuIcon />}
           </div>
         </button>
       </div>

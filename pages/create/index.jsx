@@ -22,13 +22,6 @@ import Footer from '../../components/Footer';
 import { liftWhenHoverMixin } from '../../utils/style';
 import { Context } from '../_app';
 
-const StyledHeader = styled(Header)(() => [
-  tw`absolute! left-1/2`,
-  tw`transform -translate-x-1/2`,
-]);
-
-const StyledFooter = styled(Footer)(() => [tw`sm:hidden`]);
-
 const Field = styled.div(() => [
   tw`not-first:mt-4`,
   css`
@@ -282,23 +275,28 @@ const CreatePage = () => {
             'token.json',
           );
 
-          await state.eth.nfc
-            .connect(state.eth.signer)
-            .createProject(
-              project.author,
-              project.codeCid,
-              project.parametersCid,
-              project.name,
-              project.description,
-              project.license,
-              project.pricePerTokenInWei,
-              project.maxNumEditions,
-              tokenCid,
-              { value: project.pricePerTokenInWei },
-            );
-
-          // TODO: Show transaction status toast
-          router.push('/projects');
+          const { result, emitter } = state.eth.notify.transaction({
+            sendTransaction: async () => {
+              const tx = await state.eth.nfc
+                .connect(state.eth.signer)
+                .createProject(
+                  project.author,
+                  project.codeCid,
+                  project.parametersCid,
+                  project.name,
+                  project.description,
+                  project.license,
+                  project.pricePerTokenInWei,
+                  project.maxNumEditions,
+                  tokenCid,
+                  { value: project.pricePerTokenInWei },
+                );
+              return tx.hash;
+            },
+          });
+          emitter.on('txConfirmed', () => {
+            router.push('/projects');
+          });
         } catch (err) {
           // TODO:
           console.error(err);
@@ -329,8 +327,7 @@ const CreatePage = () => {
         <title>Create</title>
       </Head>
 
-      <StyledHeader />
-
+      <Header css={[tw`absolute left-1/2`, tw`transform -translate-x-1/2`]} />
       <div css={[tw`grid grid-cols-1`, tw`sm:grid-cols-2`]}>
         <div
           css={[
@@ -369,7 +366,6 @@ const CreatePage = () => {
             />
           </div>
         </div>
-
         <div
           css={[
             tw`col-span-1`,
@@ -682,7 +678,7 @@ const CreatePage = () => {
           </div>
         </div>
       </div>
-      <StyledFooter />
+      <Footer css={[tw`sm:hidden`]} />
     </>
   );
 };

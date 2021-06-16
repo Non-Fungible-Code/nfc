@@ -18,11 +18,6 @@ import { liftWhenHoverMixin } from '../../../utils/style';
 import { Context } from '../../_app';
 import nfcAbi from '../../../NFC.json';
 
-const StyledHeader = styled(Header)(() => [
-  tw`absolute! left-1/2`,
-  tw`transform -translate-x-1/2`,
-]);
-
 const TokenPage = ({ token }) => {
   const router = useRouter();
 
@@ -38,7 +33,7 @@ const TokenPage = ({ token }) => {
         <title>{`Token | ${token.name}`}</title>
       </Head>
 
-      <StyledHeader />
+      <Header css={[tw`absolute left-1/2`, tw`transform -translate-x-1/2`]} />
       <div
         css={[
           tw`relative`,
@@ -235,10 +230,9 @@ const TokenPage = ({ token }) => {
 };
 
 export async function getStaticPaths() {
-  const { ALCHEMY_API_KEY } = process.env;
   const provider = new ethers.providers.AlchemyProvider(
     process.env.NEXT_PUBLIC_NETWORK,
-    ALCHEMY_API_KEY,
+    process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
   );
   const nfc = new ethers.Contract(
     process.env.NEXT_PUBLIC_NFC_ADDRESS,
@@ -265,12 +259,10 @@ export async function getStaticPaths() {
 }
 
 export async function getStaticProps({ params }) {
-  const { ALCHEMY_API_KEY } = process.env;
-
   try {
     const provider = new ethers.providers.AlchemyProvider(
       process.env.NEXT_PUBLIC_NETWORK,
-      ALCHEMY_API_KEY,
+      process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
     );
     const nfc = new ethers.Contract(
       process.env.NEXT_PUBLIC_NFC_ADDRESS,

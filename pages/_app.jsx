@@ -9,9 +9,17 @@ import React, {
 } from 'react';
 import ReactDom from 'react-dom';
 import tw, { css, styled } from 'twin.macro';
+import {
+  Loader as LoaderIcon,
+  X as XIcon,
+  Info as InfoIcon,
+  AlertTriangle as AlertTriangleIcon,
+} from 'react-feather';
 import { ethers } from 'ethers';
 import ipfs from 'ipfs';
 import BncOnboard from 'bnc-onboard';
+import BncNotify from 'bnc-notify';
+import { v4 as uuidv4 } from 'uuid';
 
 import '../styles.css';
 import GlobalStyles from '../components/GlobalStyles';
@@ -22,7 +30,7 @@ const { NODE_ENV } = process.env;
 const NETWORK_ID = process.env.NEXT_PUBLIC_NETWORK === 'homestead' ? 1 : 4;
 const RPC_URL = `https://eth-${
   process.env.NEXT_PUBLIC_NETWORK === 'homestead' ? 'mainnet' : 'rinkeby'
-}.alchemyapi.io/v2/7VW-n3NQm8Rucsb-68QkhS36mn2vFTce`;
+}.alchemyapi.io/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`;
 
 export const Context = React.createContext();
 
@@ -30,6 +38,7 @@ const initialState = {
   eth: {
     onboard: null,
     wallet: null,
+    notify: null,
     provider: null,
     signer: null,
     signerAddress: '',
@@ -39,8 +48,12 @@ const initialState = {
     node: null,
   },
   ui: {
-    isModalOpen: false,
-    isMenuModalOpen: false,
+    modal: {
+      messages: [],
+    },
+    menuModal: {
+      isOpen: false,
+    },
   },
 };
 
@@ -63,6 +76,16 @@ const reducer = (state, action) => {
         eth: {
           ...state.eth,
           wallet,
+        },
+      };
+    }
+    case 'SET_ETH_NOTIFY': {
+      const { notify } = action.payload;
+      return {
+        ...state,
+        eth: {
+          ...state.eth,
+          notify,
         },
       };
     }
@@ -116,21 +139,57 @@ const reducer = (state, action) => {
         },
       };
     }
-    case 'SET_UI_IS_MENU_MODAL_OPEN': {
+    case 'ADD_UI_MODAL_MESSAGE': {
+      const { message } = action.payload;
       return {
         ...state,
         ui: {
           ...state.ui,
-          isMenuModalOpen: action.payload,
+          modal: {
+            ...state.ui.modal,
+            messages: [...state.ui.modal.messages, message],
+          },
         },
       };
     }
-    case 'TOGGLE_UI_IS_MENU_MODAL_OPEN': {
+    case 'REMOVE_UI_MODAL_MESSAGE': {
+      const { id } = action.payload;
+      const idx = state.ui.modal.messages.findIndex((msg) => msg.id === id);
+      const nextMessages = [...state.ui.modal.messages];
+      nextMessages.splice(idx, 1);
       return {
         ...state,
         ui: {
           ...state.ui,
-          isMenuModalOpen: !state.ui.isMenuModalOpen,
+          modal: {
+            ...state.ui.modal,
+            messages: nextMessages,
+          },
+        },
+      };
+    }
+    case 'SET_UI_MENU_MODAL_IS_OPEN': {
+      const { isOpen } = action.payload;
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          menuModal: {
+            ...state.ui.menuModal,
+            isOpen,
+          },
+        },
+      };
+    }
+    case 'TOGGLE_UI_MENU_MODAL_IS_OPEN': {
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          menuModal: {
+            ...state.ui.menuModal,
+            isOpen: !state.ui.menuModal.isOpen,
+          },
         },
       };
     }
@@ -138,6 +197,18 @@ const reducer = (state, action) => {
       return state;
     }
   }
+};
+
+const Modal = ({ children }) => {
+  const ref = useRef(null);
+
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    ref.current = document.querySelector('#modal');
+    setIsMounted(true);
+  }, []);
+
+  return isMounted ? ReactDom.createPortal(children, ref.current) : null;
 };
 
 const MenuModal = ({ children }) => {
@@ -159,8 +230,7 @@ const App = ({ Component, pageProps }) => {
 
   useEffect(() => {
     const onboard = BncOnboard({
-      dappId: process.env.NEXT_PUBLIC_BNC_API_KEY,
-      hideBranding: true,
+      dappId: process.env.NEXT_PUBLIC_BN_API_KEY,
       networkId: NETWORK_ID,
       subscriptions: {
         address: (addr) => {
@@ -172,10 +242,28 @@ const App = ({ Component, pageProps }) => {
           });
         },
         network: (networkId) => {
-          console.log('networkId:', networkId);
+          // TODO:
           if (networkId !== NETWORK_ID) {
-            // TODO:
-            throw new Error('Wrong network');
+            // router.reload();
+            // const msgId = uuidv4();
+            // dispatch({
+            //   type: 'ADD_UI_MODAL_MESSAGE',
+            //   payload: {
+            //     message: {
+            //       id: msgId,
+            //       type: 'ERROR',
+            //       text: 'Wrong network',
+            //     },
+            //   },
+            // });
+            // setTimeout(() => {
+            //   dispatch({
+            //     type: 'REMOVE_UI_MODAL_MESSAGE',
+            //     payload: {
+            //       id: msgId,
+            //     },
+            //   });
+            // }, 10000);
           }
         },
         balance: () => {
@@ -258,6 +346,19 @@ const App = ({ Component, pageProps }) => {
         onboard,
       },
     });
+  }, [router]);
+
+  useEffect(() => {
+    const notify = BncNotify({
+      dappId: process.env.NEXT_PUBLIC_BN_API_KEY,
+      networkId: NETWORK_ID,
+    });
+    dispatch({
+      type: 'SET_ETH_NOTIFY',
+      payload: {
+        notify,
+      },
+    });
   }, []);
 
   useEffect(() => {
@@ -289,15 +390,29 @@ const App = ({ Component, pageProps }) => {
     createIpfsNode();
   }, []);
 
+  const handleModalMessageCloseButtonClick = useCallback(
+    (id) => () => {
+      dispatch({
+        type: 'REMOVE_UI_MODAL_MESSAGE',
+        payload: {
+          id,
+        },
+      });
+    },
+    [],
+  );
+
   const handleMenuItemClick = useCallback(
     (pathname) => () => {
       router.push(pathname);
       dispatch({
-        type: 'SET_UI_IS_MENU_MODAL_OPEN',
-        payload: false,
+        type: 'SET_UI_MENU_MODAL_IS_OPEN',
+        payload: {
+          isOpen: false,
+        },
       });
     },
-    [],
+    [router],
   );
 
   return (
@@ -324,10 +439,52 @@ const App = ({ Component, pageProps }) => {
       </Head>
       <GlobalStyles />
       <Context.Provider value={[state, dispatch]}>
-        <div css={[state?.ui?.isMenuModalOpen && tw`h-screen overflow-hidden`]}>
+        <div
+          css={[state?.ui?.menuModal?.isOpen && tw`h-screen overflow-hidden`]}
+        >
           <Component {...pageProps} />
         </div>
-        {state?.ui?.isMenuModalOpen && (
+        <Modal>
+          <div css={[tw`absolute`, tw`top-32 right-4`, tw`w-72`]}>
+            {state?.ui?.modal?.messages?.map((msg) => (
+              <div
+                css={[
+                  tw`flex justify-between items-center`,
+                  tw`p-6`,
+                  tw`rounded-xl`,
+                  tw`shadow-lg`,
+                ]}
+                key={msg.id}
+              >
+                <div css={[tw`flex items-center`]}>
+                  <div css={[tw`mr-4`]}>
+                    {(() => {
+                      switch (msg.type) {
+                        case 'ERROR': {
+                          return <AlertTriangleIcon />;
+                        }
+                        case 'INFO': {
+                          return <InfoIcon />;
+                        }
+                        default: {
+                          return <LoaderIcon css={[tw`animate-spin`]} />;
+                        }
+                      }
+                    })()}
+                  </div>
+                  <div>{msg.text}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleModalMessageCloseButtonClick(msg.id)}
+                >
+                  <XIcon />
+                </button>
+              </div>
+            ))}
+          </div>
+        </Modal>
+        {state?.ui?.menuModal?.isOpen && (
           <MenuModal>
             <div
               css={[tw`fixed`, tw`left-0 top-0 right-0 bottom-0`, tw`bg-black`]}

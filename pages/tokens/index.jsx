@@ -80,70 +80,71 @@ const TokensPage = ({ tokens: initialTokens }) => {
         <title>Tokens</title>
       </Head>
 
-      <Header />
-      <main css={[tw`container`, tw`mx-auto`, tw`px-4 pt-16`]}>
-        <div
-          css={[
-            tw`grid grid-cols-1 gap-8`,
-            tw`sm:(grid-cols-3)`,
-            tw`xl:(grid-cols-4)`,
-          ]}
-        >
-          {tokens.map((token) => (
-            <Link key={token.id} href={`/tokens/${token.id}`}>
-              <div
-                css={[
-                  tw`rounded-xl`,
-                  tw`shadow-lg`,
-                  tw`overflow-hidden`,
-                  tw`cursor-pointer`,
-                  ...liftWhenHoverMixin,
-                ]}
-              >
+      <div css={[tw`flex flex-col`, tw`min-h-screen`]}>
+        <Header />
+        <main css={[tw`container`, tw`mx-auto`, tw`px-4 pt-16`]}>
+          <div
+            css={[
+              tw`grid grid-cols-1 gap-8`,
+              tw`sm:(grid-cols-3)`,
+              tw`xl:(grid-cols-4)`,
+            ]}
+          >
+            {tokens.map((token) => (
+              <Link key={token.id} href={`/tokens/${token.id}`}>
                 <div
                   css={[
-                    tw`relative`,
-                    css`
-                      padding-top: 100%;
-                      iframe {
-                        ${tw`absolute left-0 top-0 w-full h-full`}
-                      }
-                    `,
+                    tw`rounded-xl`,
+                    tw`shadow-lg`,
+                    tw`overflow-hidden`,
+                    tw`cursor-pointer`,
+                    ...liftWhenHoverMixin,
                   ]}
                 >
-                  <iframe src={token.animationUrl} sandbox="allow-scripts" />
-                </div>
-                <div css={[tw`p-6`]}>
-                  <h3 css={[tw`text-2xl font-bold`]}>{token.name}</h3>
                   <div
                     css={[
-                      tw`flex justify-between items-center`,
-                      tw`mt-8`,
-                      tw`text-gray-500`,
+                      tw`relative`,
+                      css`
+                        padding-top: 100%;
+                        iframe {
+                          ${tw`absolute left-0 top-0 w-full h-full`}
+                        }
+                      `,
                     ]}
                   >
-                    <div>
-                      {`${token.owner.slice(0, 6)}...${token.owner.slice(
-                        token.owner.length - 4,
-                      )}`}
+                    <iframe src={token.animationUrl} sandbox="allow-scripts" />
+                  </div>
+                  <div css={[tw`p-6`]}>
+                    <h3 css={[tw`text-2xl font-bold`]}>{token.name}</h3>
+                    <div
+                      css={[
+                        tw`flex justify-between items-center`,
+                        tw`mt-8`,
+                        tw`text-gray-500`,
+                      ]}
+                    >
+                      <div>
+                        {`${token.owner.slice(0, 6)}...${token.owner.slice(
+                          token.owner.length - 4,
+                        )}`}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </main>
-      <Footer />
+              </Link>
+            ))}
+          </div>
+        </main>
+        <Footer css={[tw`mt-auto`]} />
+      </div>
     </>
   );
 };
 
 export async function getStaticProps() {
-  const { ALCHEMY_API_KEY } = process.env;
   const provider = new ethers.providers.AlchemyProvider(
     process.env.NEXT_PUBLIC_NETWORK,
-    ALCHEMY_API_KEY,
+    process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
   );
   const nfc = new ethers.Contract(
     process.env.NEXT_PUBLIC_NFC_ADDRESS,

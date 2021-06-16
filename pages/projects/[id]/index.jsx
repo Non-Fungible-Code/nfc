@@ -17,11 +17,6 @@ import { liftWhenHoverMixin } from '../../../utils/style';
 import { Context } from '../../_app';
 import nfcAbi from '../../../NFC.json';
 
-const StyledHeader = styled(Header)(() => [
-  tw`absolute! left-1/2`,
-  tw`transform -translate-x-1/2`,
-]);
-
 const ProjectPage = ({ project }) => {
   const router = useRouter();
 
@@ -109,19 +104,25 @@ const ProjectPage = ({ project }) => {
             new Blob([JSON.stringify(token)], { type: 'application/json' }),
             'token.json',
           );
-          await state.eth.nfc
-            .connect(state.eth.signer)
-            .mint(
-              state.eth.signerAddress,
-              ethers.BigNumber.from(project.id),
-              tokenCid,
-              {
-                value: ethers.BigNumber.from(project.pricePerTokenInWei),
-              },
-            );
 
-          // TODO: Show transaction status toast
-          router.push('/tokens');
+          const { result, emitter } = state.eth.notify.transaction({
+            sendTransaction: async () => {
+              const tx = await state.eth.nfc
+                .connect(state.eth.signer)
+                .mint(
+                  state.eth.signerAddress,
+                  ethers.BigNumber.from(project.id),
+                  tokenCid,
+                  {
+                    value: ethers.BigNumber.from(project.pricePerTokenInWei),
+                  },
+                );
+              return tx.hash;
+            },
+          });
+          emitter.on('txConfirmed', () => {
+            router.push('/tokens');
+          });
         } catch (err) {
           console.error(err);
         } finally {
@@ -154,7 +155,7 @@ const ProjectPage = ({ project }) => {
         <title>{`Project | ${project.name}`}</title>
       </Head>
 
-      <StyledHeader />
+      <Header css={[tw`absolute left-1/2`, tw`transform -translate-x-1/2`]} />
       <div
         css={[
           tw`relative`,
@@ -326,6 +327,10 @@ const ProjectPage = ({ project }) => {
                       'Please Connect First'
                     ) : project.isPaused ? (
                       'Paused'
+                    ) : ethers.BigNumber.from(project.numTokens).gte(
+                        project.maxNumEditions,
+                      ) ? (
+                      'Sold Out'
                     ) : isMinting ? (
                       <LoaderIcon tw="animate-spin" />
                     ) : (
@@ -346,10 +351,9 @@ const ProjectPage = ({ project }) => {
 };
 
 export async function getStaticPaths() {
-  const { ALCHEMY_API_KEY } = process.env;
   const provider = new ethers.providers.AlchemyProvider(
     process.env.NEXT_PUBLIC_NETWORK,
-    ALCHEMY_API_KEY,
+    process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
   );
   const nfc = new ethers.Contract(
     process.env.NEXT_PUBLIC_NFC_ADDRESS,
@@ -376,12 +380,10 @@ export async function getStaticPaths() {
 }
 
 export async function getStaticProps({ params }) {
-  const { ALCHEMY_API_KEY } = process.env;
-
   try {
     const provider = new ethers.providers.AlchemyProvider(
       process.env.NEXT_PUBLIC_NETWORK,
-      ALCHEMY_API_KEY,
+      process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
     );
     const nfc = new ethers.Contract(
       process.env.NEXT_PUBLIC_NFC_ADDRESS,

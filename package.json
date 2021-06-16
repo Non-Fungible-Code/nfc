@@ -11,6 +11,7 @@
     "@pinata/sdk": "^1.1.13",
     "@svgr/webpack": "^5.5.0",
     "axios": "^0.21.1",
+    "bnc-notify": "^1.6.2",
     "bnc-onboard": "^1.27.0",
     "ethers": "^5.3.0",
     "ipfs": "^0.55.2",

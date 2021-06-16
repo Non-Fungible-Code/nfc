@@ -1,29 +1,26 @@
 import React from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
 import tw, { css, styled } from 'twin.macro';
-import { ethers } from 'ethers';
-import axios from 'axios';
 
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
-import { liftWhenHoverMixin } from '../../utils/style';
-import nfcAbi from '../../NFC.json';
 
-const ProjectsPage = ({ projects }) => {
+const CuratedProjectsPage = () => {
   return (
     <>
       <Head>
         <title>Curated Projects</title>
       </Head>
 
-      <Header />
-      <main css={[tw`container`, tw`mx-auto`, tw`px-4 pt-16`]}>
-        Coming soon...
-      </main>
-      <Footer />
+      <div css={[tw`flex flex-col`, tw`min-h-screen`]}>
+        <Header />
+        <main css={[tw`container`, tw`mx-auto`, tw`px-4 pt-16`]}>
+          Coming soon...
+        </main>
+        <Footer css={[tw`mt-auto`]} />
+      </div>
     </>
   );
 };
 
-export default ProjectsPage;
+export default CuratedProjectsPage;

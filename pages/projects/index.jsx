@@ -92,81 +92,85 @@ const ProjectsPage = ({ projects: initialProjects }) => {
         <title>Projects</title>
       </Head>
 
-      <Header />
-      <main css={[tw`container`, tw`mx-auto`, tw`px-4 pt-12`, tw`sm:pt-16`]}>
-        {!projects ? (
-          <div>Loading...</div>
-        ) : (
-          <div
-            css={[
-              tw`grid grid-cols-1 gap-4`,
-              tw`sm:(grid-cols-3 gap-4)`,
-              tw`xl:(grid-cols-4 gap-8)`,
-            ]}
-          >
-            {projects.map((project) => (
-              <Link key={project.id} href={`/projects/${project.id}`}>
-                <div
-                  css={[
-                    tw`rounded-xl`,
-                    tw`shadow-lg`,
-                    tw`overflow-hidden`,
-                    tw`cursor-pointer`,
-                    ...liftWhenHoverMixin,
-                  ]}
-                >
+      <div css={[tw`flex flex-col`, tw`min-h-screen`]}>
+        <Header />
+        <main css={[tw`container`, tw`mx-auto`, tw`px-4 pt-12`, tw`sm:pt-16`]}>
+          {!projects ? (
+            <div>Loading...</div>
+          ) : (
+            <div
+              css={[
+                tw`grid grid-cols-1 gap-4`,
+                tw`sm:(grid-cols-3 gap-4)`,
+                tw`xl:(grid-cols-4 gap-8)`,
+              ]}
+            >
+              {projects.map((project) => (
+                <Link key={project.id} href={`/projects/${project.id}`}>
                   <div
                     css={[
-                      tw`relative`,
-                      css`
-                        padding-top: 100%;
-                        iframe {
-                          ${tw`absolute left-0 top-0 w-full h-full`}
-                        }
-                      `,
+                      tw`rounded-xl`,
+                      tw`shadow-lg`,
+                      tw`overflow-hidden`,
+                      tw`cursor-pointer`,
+                      ...liftWhenHoverMixin,
                     ]}
                   >
-                    <iframe src={project.previewUrl} sandbox="allow-scripts" />
-                  </div>
-                  <div css={[tw`p-6`]}>
-                    <h3 css={[tw`text-2xl font-bold`]}>{project.name}</h3>
                     <div
                       css={[
-                        tw`flex justify-between items-center`,
-                        tw`mt-8`,
-                        tw`text-gray-500`,
+                        tw`relative`,
+                        css`
+                          padding-top: 100%;
+                          iframe {
+                            ${tw`absolute left-0 top-0 w-full h-full`}
+                          }
+                        `,
                       ]}
                     >
-                      <div>
-                        Ξ
-                        {ethers.utils.formatEther(
-                          ethers.BigNumber.from(project.pricePerTokenInWei),
-                        )}
+                      <iframe
+                        src={project.previewUrl}
+                        sandbox="allow-scripts"
+                      />
+                    </div>
+                    <div css={[tw`p-6`]}>
+                      <h3 css={[tw`text-2xl font-bold`]}>{project.name}</h3>
+                      <div
+                        css={[
+                          tw`flex justify-between items-center`,
+                          tw`mt-8`,
+                          tw`text-gray-500`,
+                        ]}
+                      >
+                        <div>
+                          Ξ
+                          {ethers.utils.formatEther(
+                            ethers.BigNumber.from(project.pricePerTokenInWei),
+                          )}
+                        </div>
+                        <div>{`${project.numTokens} of ${
+                          project.maxNumEditions ===
+                          '115792089237316195423570985008687907853269984665640564039457584007913129639935'
+                            ? '∞'
+                            : project.maxNumEditions
+                        }`}</div>
                       </div>
-                      <div>{`${project.numTokens} of ${
-                        project.maxNumEditions ===
-                        '115792089237316195423570985008687907853269984665640564039457584007913129639935'
-                          ? '∞'
-                          : project.maxNumEditions
-                      }`}</div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </main>
-      <Footer />
+                </Link>
+              ))}
+            </div>
+          )}
+        </main>
+        <Footer css={[tw`mt-auto`]} />
+      </div>
     </>
   );
 };
 
 export async function getStaticProps() {
-  const { ALCHEMY_API_KEY } = process.env;
   const provider = new ethers.providers.AlchemyProvider(
     process.env.NEXT_PUBLIC_NETWORK,
-    ALCHEMY_API_KEY,
+    process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
   );
   const nfc = new ethers.Contract(
     process.env.NEXT_PUBLIC_NFC_ADDRESS,

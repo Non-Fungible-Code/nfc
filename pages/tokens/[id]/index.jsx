@@ -8,6 +8,7 @@ import {
   Globe as GlobeIcon,
   Box as BoxIcon,
   Code as CodeIcon,
+  Tag as TagIcon,
   ExternalLink as ExternalLinkIcon,
 } from 'react-feather';
 import { ethers } from 'ethers';
@@ -90,13 +91,14 @@ const TokenPage = ({ token }) => {
                   tw`cursor-pointer`,
                   ...liftWhenHoverMixin,
                 ]}
-                href={`https://${
-                  process.env.NEXT_PUBLIC_NETWORK === 'homestead'
-                    ? ''
-                    : `${process.env.NEXT_PUBLIC_NETWORK}.`
-                }etherscan.io/token/${process.env.NEXT_PUBLIC_NFC_ADDRESS}?a=${
-                  token.id
-                }`}
+                href={`${new URL(
+                  `/token/${process.env.NEXT_PUBLIC_NFC_ADDRESS}/?a=${token.id}`,
+                  `https://${
+                    process.env.NEXT_PUBLIC_NETWORK === 'homestead'
+                      ? ''
+                      : `rinkeby.`
+                  }etherscan.io/`,
+                )}`}
                 target="_blank"
                 rel="noreferrer"
               >
@@ -156,6 +158,36 @@ const TokenPage = ({ token }) => {
                   <span css={[tw`text-sm font-semibold`]}>
                     See IPFS Metadata
                   </span>
+                </div>
+                <div>
+                  <ExternalLinkIcon css={[tw`text-gray-300`]} />
+                </div>
+              </a>
+              <a
+                css={[
+                  tw`flex justify-between items-center`,
+                  tw`max-w-sm`,
+                  tw`p-4`,
+                  tw`rounded-xl`,
+                  tw`shadow-lg`,
+                  tw`cursor-pointer`,
+                  ...liftWhenHoverMixin,
+                  tw`mt-4`,
+                ]}
+                href={`${new URL(
+                  `/assets/${process.env.NEXT_PUBLIC_NFC_ADDRESS}/${token.id}`,
+                  `https://${
+                    process.env.NEXT_PUBLIC_NETWORK === 'homestead'
+                      ? ''
+                      : `testnets.`
+                  }opensea.io/`,
+                )}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <div css={[tw`flex items-center`]}>
+                  <TagIcon css={[tw`mr-4`]} />
+                  <span css={[tw`text-sm font-semibold`]}>See on OpenSea</span>
                 </div>
                 <div>
                   <ExternalLinkIcon css={[tw`text-gray-300`]} />

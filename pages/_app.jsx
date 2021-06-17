@@ -161,7 +161,19 @@ const App = ({ Component, pageProps }) => {
 
   const router = useRouter();
 
+  const notificationDismissCbs = useRef([]);
   useEffect(() => {
+    const notify = BncNotify({
+      dappId: process.env.NEXT_PUBLIC_BN_API_KEY,
+      networkId: NETWORK_ID,
+    });
+    dispatch({
+      type: 'SET_ETH_NOTIFY',
+      payload: {
+        notify,
+      },
+    });
+
     const onboard = BncOnboard({
       dappId: process.env.NEXT_PUBLIC_BN_API_KEY,
       networkId: NETWORK_ID,
@@ -176,7 +188,20 @@ const App = ({ Component, pageProps }) => {
         },
         network: (networkId) => {
           if (networkId !== NETWORK_ID) {
-            // TODO:
+            const { dismiss } = notify.notification({
+              eventCode: 'wrongNetwork',
+              type: 'error',
+              message: 'Wrong network',
+            });
+            notificationDismissCbs.current = [
+              ...notificationDismissCbs.current,
+              dismiss,
+            ];
+          } else {
+            notificationDismissCbs.current.forEach((cb) => {
+              cb();
+            });
+            notificationDismissCbs.current = [];
           }
         },
         balance: () => {
@@ -260,19 +285,6 @@ const App = ({ Component, pageProps }) => {
       },
     });
   }, [router]);
-
-  useEffect(() => {
-    const notify = BncNotify({
-      dappId: process.env.NEXT_PUBLIC_BN_API_KEY,
-      networkId: NETWORK_ID,
-    });
-    dispatch({
-      type: 'SET_ETH_NOTIFY',
-      payload: {
-        notify,
-      },
-    });
-  }, []);
 
   useEffect(() => {
     if (state.eth.provider) {

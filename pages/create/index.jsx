@@ -355,26 +355,45 @@ const CreatePage = () => {
               tw`absolute inset-x-4 top-32 bottom-8`,
               tw`bg-white`,
               tw`shadow-lg`,
-              css`
-                > iframe {
-                  ${tw`absolute left-0 top-0 w-full h-full`}
-                }
-              `,
               tw`sm:(inset-x-8 top-32 bottom-16)`,
             ]}
           >
-            <iframe
-              title="Token Preview"
-              src={
-                isUploading
-                  ? '/misc/uploading'
-                  : !state?.eth?.signerAddress
-                  ? '/misc/please-connect'
-                  : tokenPreviewUrl || '/misc/please-upload'
-              }
-              allow="accelerometer; autoplay; encrypted-media; fullscreen; gyroscope; picture-in-picture"
-              sandbox="allow-scripts"
-            />
+            {!state?.eth?.signerAddress ? (
+              <div
+                css={[
+                  tw`absolute left-0 top-0 w-full h-full`,
+                  tw`flex justify-center items-center`,
+                ]}
+              >
+                <h1>Please connect to your wallet</h1>
+              </div>
+            ) : isUploading ? (
+              <div
+                css={[
+                  tw`absolute left-0 top-0 w-full h-full`,
+                  tw`flex justify-center items-center`,
+                ]}
+              >
+                <LoaderIcon tw="animate-spin" />
+              </div>
+            ) : !tokenPreviewUrl ? (
+              <div
+                css={[
+                  tw`absolute left-0 top-0 w-full h-full`,
+                  tw`flex justify-center items-center`,
+                ]}
+              >
+                <h1>Please upload your codes</h1>
+              </div>
+            ) : (
+              <iframe
+                css={[tw`absolute left-0 top-0 w-full h-full`]}
+                title="Token Preview"
+                src={tokenPreviewUrl}
+                allow="accelerometer; autoplay; encrypted-media; fullscreen; gyroscope; picture-in-picture"
+                sandbox="allow-scripts"
+              />
+            )}
           </div>
         </div>
         <div
@@ -410,15 +429,19 @@ const CreatePage = () => {
                     <label
                       css={[
                         tw`px-6 py-4`,
-                        tw`bg-black`,
+                        !state?.eth?.signerAddress
+                          ? tw`bg-gray-300`
+                          : tw`bg-black`,
                         tw`text-white font-bold`,
                         tw`rounded-full`,
                         tw`shadow-lg`,
-                        isUploading
+                        !state?.eth?.signerAddress || isUploading
                           ? tw`cursor-not-allowed`
                           : tw`cursor-pointer`,
                         tw`focus:outline-none`,
-                        ...(isUploading ? [] : liftWhenHoverMixin),
+                        ...(!state?.eth?.signerAddress || isUploading
+                          ? []
+                          : liftWhenHoverMixin),
                         tw`inline-block`,
                         tw`my-4`,
                       ]}
@@ -426,6 +449,8 @@ const CreatePage = () => {
                     >
                       {isUploading ? (
                         <LoaderIcon tw="animate-spin" />
+                      ) : projectCodeCid ? (
+                        'Replace'
                       ) : (
                         'Upload a Folder'
                       )}
@@ -438,7 +463,7 @@ const CreatePage = () => {
                       webkitdirectory="true"
                       onChange={handleFormCodeFileInputChange}
                       required
-                      disabled={isUploading}
+                      disabled={!state?.eth?.signerAddress || isUploading}
                       hidden
                     />
                   </>
@@ -675,6 +700,7 @@ const CreatePage = () => {
                       : liftWhenHoverMixin),
                   ]}
                   type="submit"
+                  disabled={!state?.eth?.signerAddress || isCreating}
                 >
                   {!state?.eth?.signerAddress ? (
                     'Please Connect First'

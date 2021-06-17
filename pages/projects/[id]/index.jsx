@@ -177,23 +177,26 @@ const ProjectPage = ({ project }) => {
             tw`absolute inset-x-4 top-32 bottom-8`,
             tw`bg-white`,
             tw`shadow-lg`,
-            css`
-              > iframe {
-                ${tw`absolute left-0 top-0 w-full h-full`}
-              }
-            `,
             tw`sm:(inset-x-8 top-32 bottom-16)`,
           ]}
         >
-          <iframe
-            title="Token Preview"
-            src={
-              !state?.eth?.signerAddress
-                ? '/misc/please-connect'
-                : tokenPreviewUrl
-            }
-            sandbox="allow-scripts"
-          />
+          {!state?.eth?.signerAddress ? (
+            <div
+              css={[
+                tw`absolute left-0 top-0 w-full h-full`,
+                tw`flex justify-center items-center`,
+              ]}
+            >
+              <h1>Please connect to your wallet</h1>
+            </div>
+          ) : (
+            <iframe
+              css={[tw`absolute left-0 top-0 w-full h-full`]}
+              title="Token Preview"
+              src={tokenPreviewUrl}
+              sandbox="allow-scripts"
+            />
+          )}
         </div>
       </div>
       <main css={[tw`container`, tw`mx-auto`, tw`px-4 py-8`]}>

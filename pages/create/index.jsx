@@ -90,7 +90,6 @@ const CreatePage = () => {
         size >
         Number(process.env.NEXT_PUBLIC_MAX_UPLOAD_SIZE_IN_MB) * 1024 * 1024
       ) {
-        codeFileInputRef.current.files = [];
         throw new Error(
           `Exceed the maximum of total upload size: ${Number(
             process.env.NEXT_PUBLIC_MAX_UPLOAD_SIZE_IN_MB,

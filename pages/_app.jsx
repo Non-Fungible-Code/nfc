@@ -284,7 +284,7 @@ const App = ({ Component, pageProps }) => {
         onboard,
       },
     });
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     if (state.eth.provider) {

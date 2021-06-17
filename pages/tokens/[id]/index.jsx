@@ -244,7 +244,7 @@ TokenPage.propTypes = {
       maxNumEditions: PropTypes.string.isRequired,
       pricePerTokenInWei: PropTypes.string.isRequired,
     }).isRequired,
-    serialNo: PropTypes.string.isRequired,
+    serialNo: PropTypes.number.isRequired,
   }).isRequired,
 };
 

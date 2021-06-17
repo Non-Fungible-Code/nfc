@@ -1,8 +1,9 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React from 'react';
+import PropTypes from 'prop-types';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import tw, { css, styled } from 'twin.macro';
+import tw, { css } from 'twin.macro';
 import {
   Globe as GlobeIcon,
   Box as BoxIcon,
@@ -15,13 +16,10 @@ import axios from 'axios';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
 import { liftWhenHoverMixin } from '../../../utils/style';
-import { Context } from '../../_app';
 import nfcAbi from '../../../NFC.json';
 
 const TokenPage = ({ token }) => {
   const router = useRouter();
-
-  const [state, dispatch] = useContext(Context);
 
   if (router.isFallback) {
     return <div>Loading...</div>;
@@ -56,7 +54,11 @@ const TokenPage = ({ token }) => {
             tw`sm:(inset-x-8 top-32 bottom-16)`,
           ]}
         >
-          <iframe src={token.animationUrl} sandbox="allow-scripts" />
+          <iframe
+            title="Token"
+            src={token.animationUrl}
+            sandbox="allow-scripts"
+          />
         </div>
       </div>
       <main css={[tw`container`, tw`mx-auto`, tw`px-4 py-8`]}>
@@ -227,6 +229,23 @@ const TokenPage = ({ token }) => {
       <Footer />
     </>
   );
+};
+
+TokenPage.propTypes = {
+  token: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    uri: PropTypes.string.isRequired,
+    animationUrl: PropTypes.string.isRequired.animation_url,
+    name: PropTypes.string.isRequired.name,
+    description: PropTypes.string.isRequired.description,
+    owner: PropTypes.string.isRequired,
+    project: PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      maxNumEditions: PropTypes.string.isRequired,
+      pricePerTokenInWei: PropTypes.string.isRequired,
+    }).isRequired,
+    serialNo: PropTypes.string.isRequired,
+  }).isRequired,
 };
 
 export async function getStaticPaths() {

@@ -1,7 +1,8 @@
 import React, { useContext, useCallback } from 'react';
+import PropTypes from 'prop-types';
 import Head from 'next/head';
 import Link from 'next/link';
-import tw, { css, styled } from 'twin.macro';
+import tw, { css } from 'twin.macro';
 import { ethers } from 'ethers';
 import axios from 'axios';
 import useSWR from 'swr';
@@ -55,7 +56,7 @@ const fetchTokens = async (nfc) => {
 };
 
 const TokensPage = ({ tokens: initialTokens }) => {
-  const [state, dispatch] = useContext(Context);
+  const [state] = useContext(Context);
 
   const fetcher = useCallback(
     () => fetchTokens(state.eth.nfc),
@@ -112,7 +113,11 @@ const TokensPage = ({ tokens: initialTokens }) => {
                       `,
                     ]}
                   >
-                    <iframe src={token.animationUrl} sandbox="allow-scripts" />
+                    <iframe
+                      title="Token"
+                      src={token.animationUrl}
+                      sandbox="allow-scripts"
+                    />
                   </div>
                   <div css={[tw`p-6`]}>
                     <h3 css={[tw`text-2xl font-bold`]}>{token.name}</h3>
@@ -139,6 +144,19 @@ const TokensPage = ({ tokens: initialTokens }) => {
       </div>
     </>
   );
+};
+
+TokensPage.propTypes = {
+  tokens: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      animationUrl: PropTypes.string.isRequired.animation_url,
+      name: PropTypes.string.isRequired.name,
+      description: PropTypes.string.isRequired.description,
+      owner: PropTypes.string.isRequired,
+      serialNo: PropTypes.string.isRequired,
+    }).isRequired,
+  ).isRequired,
 };
 
 export async function getStaticProps() {

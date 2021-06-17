@@ -46,7 +46,7 @@ const Field = styled.div(() => [
 ]);
 
 const CreatePage = () => {
-  const [state, dispatch] = useContext(Context);
+  const [state] = useContext(Context);
 
   const router = useRouter();
 
@@ -102,12 +102,16 @@ const CreatePage = () => {
       }
       await pin();
     } catch (err) {
-      // TODO:
       console.error(err);
+      state.eth.notify.notification({
+        eventCode: 'projectCodeUploadError',
+        type: 'error',
+        message: err.message,
+      });
     } finally {
       setIsUploading(false);
     }
-  }, [projectCodeCid]);
+  }, [projectCodeCid, state?.eth?.notify]);
 
   const [formValueByName, setFormValueByName] = useState({
     name: '',
@@ -192,20 +196,20 @@ const CreatePage = () => {
   const [isCreating, setIsCreating] = useState(false);
   const handleFormSubmit = useCallback(
     async (e) => {
-      e.preventDefault();
-      if (e.target.reportValidity()) {
-        const pin = async (blob, filename) => {
-          const formData = new FormData();
-          formData.append('file', blob, filename);
-          const { cid } = await axios
-            .post(
-              `${new URL('ipfs/pin', process.env.NEXT_PUBLIC_API_BASE_URL)}`,
-              formData,
-            )
-            .then((res) => res.data);
-          return cid;
-        };
-        try {
+      try {
+        e.preventDefault();
+        if (e.target.reportValidity()) {
+          const pin = async (blob, filename) => {
+            const formData = new FormData();
+            formData.append('file', blob, filename);
+            const { cid } = await axios
+              .post(
+                `${new URL('ipfs/pin', process.env.NEXT_PUBLIC_API_BASE_URL)}`,
+                formData,
+              )
+              .then((res) => res.data);
+            return cid;
+          };
           setIsCreating(true);
 
           if (
@@ -275,7 +279,7 @@ const CreatePage = () => {
             'token.json',
           );
 
-          const { result, emitter } = state.eth.notify.transaction({
+          const { emitter } = state.eth.notify.transaction({
             sendTransaction: async () => {
               const tx = await state.eth.nfc
                 .connect(state.eth.signer)
@@ -297,19 +301,24 @@ const CreatePage = () => {
           emitter.on('txConfirmed', () => {
             router.push('/projects');
           });
-        } catch (err) {
-          // TODO:
-          console.error(err);
-        } finally {
-          setIsCreating(false);
         }
+      } catch (err) {
+        console.error(err);
+        state.eth.notify.notification({
+          eventCode: 'projectCreateError',
+          type: 'error',
+          message: !projectCodeCid ? 'Please upload your code' : err.message,
+        });
+      } finally {
+        setIsCreating(false);
       }
     },
     [
       router,
-      state.eth.nfc,
-      state.eth.signer,
+      state?.eth?.nfc,
+      state?.eth?.signer,
       state?.eth?.signerAddress,
+      state?.eth?.notify,
       projectParameters,
       projectCodeCid,
       formValueByName.name,
@@ -318,6 +327,7 @@ const CreatePage = () => {
       formValueByName.isLimitedEdition,
       formValueByName.maxNumEditions,
       formValueByName.price,
+      tokenPreviewUrl,
     ],
   );
 
@@ -354,6 +364,7 @@ const CreatePage = () => {
             ]}
           >
             <iframe
+              title="Token Preview"
               src={
                 isUploading
                   ? '/misc/uploading'

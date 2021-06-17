@@ -1,6 +1,6 @@
 import React from 'react';
 import Head from 'next/head';
-import tw, { css, styled } from 'twin.macro';
+import tw from 'twin.macro';
 
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';

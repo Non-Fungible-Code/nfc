@@ -1,7 +1,8 @@
 import React, { useCallback, useContext } from 'react';
+import PropTypes from 'prop-types';
 import Head from 'next/head';
 import Link from 'next/link';
-import tw, { css, styled } from 'twin.macro';
+import tw, { css } from 'twin.macro';
 import { ethers } from 'ethers';
 import axios from 'axios';
 import useSWR from 'swr';
@@ -53,12 +54,12 @@ const fetchProjects = async (nfc) => {
     (token) => token.animation_url,
   );
 
-  const result = projects.map((p, idx) => ({
+  const result = projects.map((project, idx) => ({
     id: projectIds[idx].toString(),
-    name: p.name,
-    description: p.description,
-    pricePerTokenInWei: p.pricePerTokenInWei.toString(),
-    maxNumEditions: p.maxNumEditions.toString(),
+    name: project.name,
+    description: project.description,
+    pricePerTokenInWei: project.pricePerTokenInWei.toString(),
+    maxNumEditions: project.maxNumEditions.toString(),
     numTokens: projectNumTokenss[idx],
     previewUrl: projectPreviewUrls[idx],
   }));
@@ -67,7 +68,7 @@ const fetchProjects = async (nfc) => {
 };
 
 const ProjectsPage = ({ projects: initialProjects }) => {
-  const [state, dispatch] = useContext(Context);
+  const [state] = useContext(Context);
 
   const fetcher = useCallback(
     () => fetchProjects(state.eth.nfc),
@@ -128,6 +129,7 @@ const ProjectsPage = ({ projects: initialProjects }) => {
                       ]}
                     >
                       <iframe
+                        title="Project Preview"
                         src={project.previewUrl}
                         sandbox="allow-scripts"
                       />
@@ -165,6 +167,20 @@ const ProjectsPage = ({ projects: initialProjects }) => {
       </div>
     </>
   );
+};
+
+ProjectsPage.propTypes = {
+  projects: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      name: PropTypes.string.isRequired,
+      description: PropTypes.string.isRequired,
+      pricePerTokenInWei: PropTypes.string.isRequired,
+      maxNumEditions: PropTypes.string.isRequired,
+      numTokens: PropTypes.number.isRequired,
+      previewUrl: PropTypes.string.isRequired,
+    }).isRequired,
+  ).isRequired,
 };
 
 export async function getStaticProps() {

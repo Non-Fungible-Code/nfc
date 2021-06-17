@@ -1,8 +1,9 @@
 import React, { useContext, useState, useCallback, useMemo } from 'react';
+import PropTypes from 'prop-types';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import tw, { css, styled } from 'twin.macro';
+import tw, { css } from 'twin.macro';
 import {
   Loader as LoaderIcon,
   Image as ImageIcon,
@@ -20,7 +21,7 @@ import nfcAbi from '../../../NFC.json';
 const ProjectPage = ({ project }) => {
   const router = useRouter();
 
-  const [state, dispatch] = useContext(Context);
+  const [state] = useContext(Context);
 
   const projectParameterByKey = useMemo(
     () =>
@@ -105,7 +106,7 @@ const ProjectPage = ({ project }) => {
             'token.json',
           );
 
-          const { result, emitter } = state.eth.notify.transaction({
+          const { emitter } = state.eth.notify.transaction({
             sendTransaction: async () => {
               const tx = await state.eth.nfc
                 .connect(state.eth.signer)
@@ -125,6 +126,11 @@ const ProjectPage = ({ project }) => {
           });
         } catch (err) {
           console.error(err);
+          state.eth.notify.notification({
+            eventCode: 'tokenMintError',
+            type: 'error',
+            message: err.message,
+          });
         } finally {
           setIsMinting(false);
         }
@@ -135,6 +141,7 @@ const ProjectPage = ({ project }) => {
       state?.eth?.nfc,
       state?.eth?.signer,
       state?.eth?.signerAddress,
+      state?.eth?.notify,
       tokenPreviewUrl,
       project?.name,
       project?.description,
@@ -179,6 +186,7 @@ const ProjectPage = ({ project }) => {
           ]}
         >
           <iframe
+            title="Token Preview"
             src={
               !state?.eth?.signerAddress
                 ? '/misc/please-connect'
@@ -348,6 +356,30 @@ const ProjectPage = ({ project }) => {
       <Footer />
     </>
   );
+};
+
+ProjectPage.propTypes = {
+  project: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    author: PropTypes.string.isRequired,
+    codeCid: PropTypes.string.isRequired,
+    parameters: PropTypes.arrayOf(
+      PropTypes.shape({
+        key: PropTypes.string.isRequired,
+        type: PropTypes.oneOf(['STRING', 'NUMBER']).isRequired,
+        name: PropTypes.string.isRequired,
+        defaultValue: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
+          .isRequired,
+      }),
+    ).isRequired,
+    name: PropTypes.string.isRequired,
+    description: PropTypes.string.isRequired,
+    pricePerTokenInWei: PropTypes.string.isRequired,
+    maxNumEditions: PropTypes.string.isRequired,
+    license: PropTypes.string.isRequired,
+    isPaused: PropTypes.bool.isRequired,
+    numTokens: PropTypes.number.isRequired,
+  }).isRequired,
 };
 
 export async function getStaticPaths() {

@@ -8,24 +8,14 @@ import React, {
   useRef,
 } from 'react';
 import ReactDom from 'react-dom';
-import tw, { css, styled } from 'twin.macro';
-import {
-  Loader as LoaderIcon,
-  X as XIcon,
-  Info as InfoIcon,
-  AlertTriangle as AlertTriangleIcon,
-} from 'react-feather';
+import tw, { css } from 'twin.macro';
 import { ethers } from 'ethers';
-import ipfs from 'ipfs';
 import BncOnboard from 'bnc-onboard';
 import BncNotify from 'bnc-notify';
-import { v4 as uuidv4 } from 'uuid';
 
-import '../styles.css';
+import '../fonts.css';
 import GlobalStyles from '../components/GlobalStyles';
 import nfcAbi from '../NFC.json';
-
-const { NODE_ENV } = process.env;
 
 const NETWORK_ID = process.env.NEXT_PUBLIC_NETWORK === 'homestead' ? 1 : 4;
 const RPC_URL = `https://eth-${
@@ -44,13 +34,7 @@ const initialState = {
     signerAddress: '',
     nfc: null,
   },
-  ipfs: {
-    node: null,
-  },
   ui: {
-    modal: {
-      messages: [],
-    },
     menuModal: {
       isOpen: false,
     },
@@ -129,45 +113,6 @@ const reducer = (state, action) => {
         },
       };
     }
-    case 'SET_IPFS_NODE': {
-      const { node } = action.payload;
-      return {
-        ...state,
-        ipfs: {
-          ...state.ipfs,
-          node,
-        },
-      };
-    }
-    case 'ADD_UI_MODAL_MESSAGE': {
-      const { message } = action.payload;
-      return {
-        ...state,
-        ui: {
-          ...state.ui,
-          modal: {
-            ...state.ui.modal,
-            messages: [...state.ui.modal.messages, message],
-          },
-        },
-      };
-    }
-    case 'REMOVE_UI_MODAL_MESSAGE': {
-      const { id } = action.payload;
-      const idx = state.ui.modal.messages.findIndex((msg) => msg.id === id);
-      const nextMessages = [...state.ui.modal.messages];
-      nextMessages.splice(idx, 1);
-      return {
-        ...state,
-        ui: {
-          ...state.ui,
-          modal: {
-            ...state.ui.modal,
-            messages: nextMessages,
-          },
-        },
-      };
-    }
     case 'SET_UI_MENU_MODAL_IS_OPEN': {
       const { isOpen } = action.payload;
       return {
@@ -197,18 +142,6 @@ const reducer = (state, action) => {
       return state;
     }
   }
-};
-
-const Modal = ({ children }) => {
-  const ref = useRef(null);
-
-  const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => {
-    ref.current = document.querySelector('#modal');
-    setIsMounted(true);
-  }, []);
-
-  return isMounted ? ReactDom.createPortal(children, ref.current) : null;
 };
 
 const MenuModal = ({ children }) => {
@@ -242,28 +175,8 @@ const App = ({ Component, pageProps }) => {
           });
         },
         network: (networkId) => {
-          // TODO:
           if (networkId !== NETWORK_ID) {
-            // router.reload();
-            // const msgId = uuidv4();
-            // dispatch({
-            //   type: 'ADD_UI_MODAL_MESSAGE',
-            //   payload: {
-            //     message: {
-            //       id: msgId,
-            //       type: 'ERROR',
-            //       text: 'Wrong network',
-            //     },
-            //   },
-            // });
-            // setTimeout(() => {
-            //   dispatch({
-            //     type: 'REMOVE_UI_MODAL_MESSAGE',
-            //     payload: {
-            //       id: msgId,
-            //     },
-            //   });
-            // }, 10000);
+            // TODO:
           }
         },
         balance: () => {
@@ -377,31 +290,6 @@ const App = ({ Component, pageProps }) => {
     }
   }, [state?.eth?.provider]);
 
-  useEffect(() => {
-    const createIpfsNode = async () => {
-      const node = await ipfs.create();
-      dispatch({
-        type: 'SET_IPFS_NODE',
-        payload: {
-          node,
-        },
-      });
-    };
-    createIpfsNode();
-  }, []);
-
-  const handleModalMessageCloseButtonClick = useCallback(
-    (id) => () => {
-      dispatch({
-        type: 'REMOVE_UI_MODAL_MESSAGE',
-        payload: {
-          id,
-        },
-      });
-    },
-    [],
-  );
-
   const handleMenuItemClick = useCallback(
     (pathname) => () => {
       router.push(pathname);
@@ -444,50 +332,15 @@ const App = ({ Component, pageProps }) => {
         >
           <Component {...pageProps} />
         </div>
-        <Modal>
-          <div css={[tw`absolute`, tw`top-32 right-4`, tw`w-72`]}>
-            {state?.ui?.modal?.messages?.map((msg) => (
-              <div
-                css={[
-                  tw`flex justify-between items-center`,
-                  tw`p-6`,
-                  tw`rounded-xl`,
-                  tw`shadow-lg`,
-                ]}
-                key={msg.id}
-              >
-                <div css={[tw`flex items-center`]}>
-                  <div css={[tw`mr-4`]}>
-                    {(() => {
-                      switch (msg.type) {
-                        case 'ERROR': {
-                          return <AlertTriangleIcon />;
-                        }
-                        case 'INFO': {
-                          return <InfoIcon />;
-                        }
-                        default: {
-                          return <LoaderIcon css={[tw`animate-spin`]} />;
-                        }
-                      }
-                    })()}
-                  </div>
-                  <div>{msg.text}</div>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleModalMessageCloseButtonClick(msg.id)}
-                >
-                  <XIcon />
-                </button>
-              </div>
-            ))}
-          </div>
-        </Modal>
         {state?.ui?.menuModal?.isOpen && (
           <MenuModal>
             <div
-              css={[tw`fixed`, tw`left-0 top-0 right-0 bottom-0`, tw`bg-black`]}
+              css={[
+                tw`fixed`,
+                tw`left-0 top-0 right-0 bottom-0`,
+                tw`bg-black`,
+                tw`sm:hidden`,
+              ]}
             >
               <div
                 css={[
@@ -511,13 +364,14 @@ const App = ({ Component, pageProps }) => {
                   { name: 'Gallery', pathname: '/tokens' },
                   { name: 'Create', pathname: '/create' },
                 ].map(({ name, pathname }) => (
-                  <div
-                    css={[tw`py-2`]}
+                  <button
+                    css={[tw`block`, tw`py-2`]}
                     key={pathname}
+                    type="button"
                     onClick={handleMenuItemClick(pathname)}
                   >
                     {name}
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>

@@ -67,6 +67,7 @@ const TokensPage = ({ tokens: initialTokens }) => {
     fetcher,
     {
       initialData: initialTokens,
+      refreshInterval: 1000,
     },
   );
 

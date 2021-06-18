@@ -11,6 +11,7 @@ import {
 } from 'react-feather';
 import { ethers } from 'ethers';
 import axios from 'axios';
+import useSWR from 'swr';
 
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
@@ -18,10 +19,59 @@ import { liftWhenHoverMixin } from '../../../utils/style';
 import { Context } from '../../_app';
 import nfcAbi from '../../../NFC.json';
 
-const ProjectPage = ({ project }) => {
+const fetchProject = async (nfc, projectId) => {
+  const project = await nfc.project(ethers.BigNumber.from(projectId));
+
+  const projectParameters = await axios
+    .get(
+      `${new URL(
+        `/ipfs/${project.parametersCid}`,
+        `https://${process.env.NEXT_PUBLIC_IPFS_GATEWAY_DOMAIN}`,
+      )}`,
+    )
+    .then((res) => res.data);
+  const projectTokenIds = await nfc.tokenIdsByProjectId(projectId);
+  const projectNumTokens = projectTokenIds.length;
+
+  return {
+    id: projectId,
+    author: project.author,
+    codeCid: project.codeCid,
+    parameters: projectParameters,
+    name: project.name,
+    description: project.description,
+    license: project.license,
+    pricePerTokenInWei: project.pricePerTokenInWei.toString(),
+    maxNumEditions: project.maxNumEditions.toString(),
+    isPaused: project.isPaused,
+    numTokens: projectNumTokens,
+  };
+};
+
+const ProjectPage = ({ project: initialProject }) => {
   const router = useRouter();
 
   const [state] = useContext(Context);
+
+  const fetcher = useCallback(
+    (key) => fetchProject(state.eth.nfc, key.split('/')[2]),
+    [state?.eth?.nfc],
+  );
+  const { data: project, err } = useSWR(
+    state?.eth?.nfc && initialProject?.id
+      ? `/projects/${initialProject.id}`
+      : null,
+    fetcher,
+    {
+      ...(!!initialProject && { initialData: initialProject }),
+      refreshInterval: 1000,
+    },
+  );
+
+  // TODO: Handle errors
+  if (err) {
+    console.error(err);
+  }
 
   const projectParameterByKey = useMemo(
     () =>
@@ -428,34 +478,11 @@ export async function getStaticProps({ params }) {
 
     const projectId = params.id;
 
-    const project = await nfc.project(ethers.BigNumber.from(projectId));
-
-    const projectParameters = await axios
-      .get(
-        `${new URL(
-          `/ipfs/${project.parametersCid}`,
-          `https://${process.env.NEXT_PUBLIC_IPFS_GATEWAY_DOMAIN}`,
-        )}`,
-      )
-      .then((res) => res.data);
-    const projectTokenIds = await nfc.tokenIdsByProjectId(projectId);
-    const projectNumTokens = projectTokenIds.length;
+    const project = await fetchProject(nfc, projectId);
 
     return {
       props: {
-        project: {
-          id: projectId,
-          author: project.author,
-          codeCid: project.codeCid,
-          parameters: projectParameters,
-          name: project.name,
-          description: project.description,
-          license: project.license,
-          pricePerTokenInWei: project.pricePerTokenInWei.toString(),
-          maxNumEditions: project.maxNumEditions.toString(),
-          isPaused: project.isPaused,
-          numTokens: projectNumTokens,
-        },
+        project,
       },
       revalidate: 10,
     };

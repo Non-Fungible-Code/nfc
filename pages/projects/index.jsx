@@ -79,6 +79,7 @@ const ProjectsPage = ({ projects: initialProjects }) => {
     fetcher,
     {
       initialData: initialProjects,
+      refreshInterval: 1000,
     },
   );
 

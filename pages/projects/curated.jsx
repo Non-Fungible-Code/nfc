@@ -72,6 +72,7 @@ const CuratedProjectsPage = ({ curatedProjects: initialCuratedProjects }) => {
     fetcher,
     {
       initialData: initialCuratedProjects,
+      refreshInterval: 1000,
     },
   );
 

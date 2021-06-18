@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useContext } from 'react';
 import PropTypes from 'prop-types';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -13,14 +13,73 @@ import {
 } from 'react-feather';
 import { ethers } from 'ethers';
 import axios from 'axios';
+import useSWR from 'swr';
 
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
 import { liftWhenHoverMixin } from '../../../utils/style';
+import { Context } from '../../_app';
 import nfcAbi from '../../../NFC.json';
 
-const TokenPage = ({ token }) => {
+const fetchToken = async (nfc, tokenId) => {
+  const tokenUri = await nfc.tokenURI(ethers.BigNumber.from(tokenId));
+
+  const token = await axios
+    .get(
+      `${new URL(
+        `/ipfs/${tokenUri.split('://')[1]}`,
+        `https://${process.env.NEXT_PUBLIC_IPFS_GATEWAY_DOMAIN}`,
+      )}`,
+    )
+    .then((r) => r.data);
+
+  const tokenOwner = await nfc.ownerOf(tokenId);
+
+  const tokenProjectId = await nfc.projectIdByTokenId(tokenId);
+  const tokenProject = await nfc.project(tokenProjectId);
+
+  const tokenProjectTokenIds = await nfc.tokenIdsByProjectId(tokenProjectId);
+  const tokenSerialNo =
+    1 + tokenProjectTokenIds.map((id) => id.toString()).indexOf(tokenId);
+
+  return {
+    id: tokenId,
+    uri: tokenUri,
+    animationUrl: token.animation_url,
+    name: token.name,
+    description: token.description,
+    owner: tokenOwner,
+    project: {
+      id: tokenProjectId.toString(),
+      maxNumEditions: tokenProject.maxNumEditions.toString(),
+      pricePerTokenInWei: tokenProject.pricePerTokenInWei.toString(),
+    },
+    serialNo: tokenSerialNo,
+  };
+};
+
+const TokenPage = ({ token: initialToken }) => {
   const router = useRouter();
+
+  const [state] = useContext(Context);
+
+  const fetcher = useCallback(
+    (key) => fetchToken(state.eth.nfc, key.split('/')[2]),
+    [state?.eth?.nfc],
+  );
+  const { data: token, err } = useSWR(
+    state?.eth?.nfc && initialToken?.id ? `/token/${initialToken.id}` : null,
+    fetcher,
+    {
+      ...(!!initialToken && { initialData: initialToken }),
+      refreshInterval: 1000,
+    },
+  );
+
+  // TODO: Handle errors
+  if (err) {
+    console.error(err);
+  }
 
   if (router.isFallback) {
     return <div>Loading...</div>;
@@ -163,36 +222,36 @@ const TokenPage = ({ token }) => {
                   <ExternalLinkIcon css={[tw`text-gray-300`]} />
                 </div>
               </a>
-              <a
-                css={[
-                  tw`flex justify-between items-center`,
-                  tw`max-w-sm`,
-                  tw`p-4`,
-                  tw`rounded-xl`,
-                  tw`shadow-lg`,
-                  tw`cursor-pointer`,
-                  ...liftWhenHoverMixin,
-                  tw`mt-4`,
-                ]}
-                href={`${new URL(
-                  `/assets/${process.env.NEXT_PUBLIC_NFC_ADDRESS}/${token.id}`,
-                  `https://${
-                    process.env.NEXT_PUBLIC_NETWORK === 'homestead'
-                      ? ''
-                      : `testnets.`
-                  }opensea.io/`,
-                )}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <div css={[tw`flex items-center`]}>
-                  <TagIcon css={[tw`mr-4`]} />
-                  <span css={[tw`text-sm font-semibold`]}>See on OpenSea</span>
-                </div>
-                <div>
-                  <ExternalLinkIcon css={[tw`text-gray-300`]} />
-                </div>
-              </a>
+              {/* <a */}
+              {/*   css={[ */}
+              {/*     tw`flex justify-between items-center`, */}
+              {/*     tw`max-w-sm`, */}
+              {/*     tw`p-4`, */}
+              {/*     tw`rounded-xl`, */}
+              {/*     tw`shadow-lg`, */}
+              {/*     tw`cursor-pointer`, */}
+              {/*     ...liftWhenHoverMixin, */}
+              {/*     tw`mt-4`, */}
+              {/*   ]} */}
+              {/*   href={`${new URL( */}
+              {/*     `/assets/${process.env.NEXT_PUBLIC_NFC_ADDRESS}/${token.id}`, */}
+              {/*     `https://${ */}
+              {/*       process.env.NEXT_PUBLIC_NETWORK === 'homestead' */}
+              {/*         ? '' */}
+              {/*         : `testnets.` */}
+              {/*     }opensea.io/`, */}
+              {/*   )}`} */}
+              {/*   target="_blank" */}
+              {/*   rel="noreferrer" */}
+              {/* > */}
+              {/*   <div css={[tw`flex items-center`]}> */}
+              {/*     <TagIcon css={[tw`mr-4`]} /> */}
+              {/*     <span css={[tw`text-sm font-semibold`]}>See on OpenSea</span> */}
+              {/*   </div> */}
+              {/*   <div> */}
+              {/*     <ExternalLinkIcon css={[tw`text-gray-300`]} /> */}
+              {/*   </div> */}
+              {/* </a> */}
             </div>
           </div>
           <div css={[tw`col-span-1`, tw`xl:col-span-2`]}>
@@ -323,42 +382,11 @@ export async function getStaticProps({ params }) {
 
     const tokenId = params.id;
 
-    const tokenUri = await nfc.tokenURI(ethers.BigNumber.from(tokenId));
-
-    const token = await axios
-      .get(
-        `${new URL(
-          `/ipfs/${tokenUri.split('://')[1]}`,
-          `https://${process.env.NEXT_PUBLIC_IPFS_GATEWAY_DOMAIN}`,
-        )}`,
-      )
-      .then((r) => r.data);
-
-    const tokenOwner = await nfc.ownerOf(tokenId);
-
-    const tokenProjectId = await nfc.projectIdByTokenId(tokenId);
-    const tokenProject = await nfc.project(tokenProjectId);
-
-    const tokenProjectTokenIds = await nfc.tokenIdsByProjectId(tokenProjectId);
-    const tokenSerialNo =
-      1 + tokenProjectTokenIds.map((id) => id.toString()).indexOf(tokenId);
+    const token = await fetchToken(nfc, tokenId);
 
     return {
       props: {
-        token: {
-          id: tokenId,
-          uri: tokenUri,
-          animationUrl: token.animation_url,
-          name: token.name,
-          description: token.description,
-          owner: tokenOwner,
-          project: {
-            id: tokenProjectId.toString(),
-            maxNumEditions: tokenProject.maxNumEditions.toString(),
-            pricePerTokenInWei: tokenProject.pricePerTokenInWei.toString(),
-          },
-          serialNo: tokenSerialNo,
-        },
+        token,
       },
       revalidate: 10,
     };

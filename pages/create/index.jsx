@@ -100,6 +100,7 @@ const CreatePage = () => {
         await unpin(projectCodeCid);
       }
       await pin();
+      codeFileInputRef.current.value = '';
     } catch (err) {
       console.error(err);
       state.eth.notify.notification({

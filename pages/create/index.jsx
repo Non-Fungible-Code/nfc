@@ -10,6 +10,7 @@ import { useRouter } from 'next/router';
 import tw, { css, styled } from 'twin.macro';
 import {
   Loader as LoaderIcon,
+  HelpCircle as HelpCircleIcon,
   Plus as PlusIcon,
   X as XIcon,
 } from 'react-feather';
@@ -425,7 +426,7 @@ const CreatePage = () => {
             <form onSubmit={handleFormSubmit}>
               <div css={[tw`rounded-xl`, tw`shadow-lg`]}>
                 <div css={[tw`p-8`]}>
-                  <>
+                  <div css={[tw`flex items-center`]}>
                     <label
                       css={[
                         tw`px-6 py-4`,
@@ -466,7 +467,15 @@ const CreatePage = () => {
                       disabled={!state?.eth?.signerAddress || isUploading}
                       hidden
                     />
-                  </>
+                    <a
+                      css={[tw`ml-4`]}
+                      href="https://docs.nfcode.art/guides/create"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <HelpCircleIcon />
+                    </a>
+                  </div>
                   <Field>
                     <label htmlFor="name">Name</label>
                     <input

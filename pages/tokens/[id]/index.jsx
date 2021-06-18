@@ -67,7 +67,7 @@ const TokenPage = ({ token: initialToken }) => {
     (key) => fetchToken(state.eth.nfc, key.split('/')[2]),
     [state?.eth?.nfc],
   );
-  const { data: token, err } = useSWR(
+  const { data: token = initialToken, err } = useSWR(
     state?.eth?.nfc && initialToken?.id ? `/token/${initialToken.id}` : null,
     fetcher,
     {
@@ -336,7 +336,7 @@ TokenPage.propTypes = {
       pricePerTokenInWei: PropTypes.string.isRequired,
     }).isRequired,
     serialNo: PropTypes.number.isRequired,
-  }).isRequired,
+  }),
 };
 
 export async function getStaticPaths() {

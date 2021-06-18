@@ -85,6 +85,7 @@ const TokensPage = ({ tokens: initialTokens }) => {
       <div css={[tw`flex flex-col`, tw`min-h-screen`]}>
         <Header />
         <main css={[tw`container`, tw`mx-auto`, tw`px-4 pt-16`]}>
+          <h1 css={[tw`pb-8`, tw`text-5xl font-bold`]}>Gallery</h1>
           <div
             css={[
               tw`grid grid-cols-1 gap-8`,

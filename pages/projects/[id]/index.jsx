@@ -57,7 +57,7 @@ const ProjectPage = ({ project: initialProject }) => {
     (key) => fetchProject(state.eth.nfc, key.split('/')[2]),
     [state?.eth?.nfc],
   );
-  const { data: project, err } = useSWR(
+  const { data: project = initialProject, err } = useSWR(
     state?.eth?.nfc && initialProject?.id
       ? `/projects/${initialProject.id}`
       : null,
@@ -174,12 +174,12 @@ const ProjectPage = ({ project: initialProject }) => {
           emitter.on('txConfirmed', () => {
             router.push('/tokens');
           });
-        } catch (err) {
-          console.error(err);
+        } catch (error) {
+          console.error(error);
           state.eth.notify.notification({
             eventCode: 'tokenMintError',
             type: 'error',
-            message: err.message,
+            message: error.message,
           });
         } finally {
           setIsMinting(false);
@@ -432,7 +432,7 @@ ProjectPage.propTypes = {
     license: PropTypes.string.isRequired,
     isPaused: PropTypes.bool.isRequired,
     numTokens: PropTypes.number.isRequired,
-  }).isRequired,
+  }),
 };
 
 export async function getStaticPaths() {

@@ -43,6 +43,7 @@ const tabs = [
 
 const Header = ({ className }) => {
   const router = useRouter();
+
   const [state, dispatch] = useContext(Context);
 
   const handleConnectButtonClick = useCallback(async () => {
@@ -142,42 +143,44 @@ const Header = ({ className }) => {
           </Link>
         )}
         {state?.eth?.signerAddress ? (
-          <button
-            css={[
-              state?.ui?.menuModal?.isOpen && tw`hidden`,
-              tw`p-1.5`,
-              tw`bg-white`,
-              tw`text-black font-bold`,
-              tw`rounded-full`,
-              tw`shadow-lg`,
-              tw`cursor-pointer`,
-              tw`focus:outline-none`,
-              ...liftWhenHoverMixin,
-              tw`sm:inline-block`,
-              tw`sm:(px-6 py-4)`,
-            ]}
-            type="button"
-          >
-            <div
+          <Link href={`/accounts/${state.eth.signerAddress}`}>
+            <button
               css={[
-                css`
-                  width: 44px;
-                  height: 44px;
-                `,
-                tw`bg-gradient-to-br from-purple-400 to-purple-900`,
+                state?.ui?.menuModal?.isOpen && tw`hidden`,
+                tw`p-1.5`,
+                tw`bg-white`,
+                tw`text-black font-bold`,
                 tw`rounded-full`,
-                tw`sm:hidden`,
+                tw`shadow-lg`,
+                tw`cursor-pointer`,
+                tw`focus:outline-none`,
+                ...liftWhenHoverMixin,
+                tw`sm:inline-block`,
+                tw`sm:(px-6 py-4)`,
               ]}
-            />
-            <span css={[tw`hidden`, tw`sm:inline`]}>
-              {`${state.eth.signerAddress.slice(
-                0,
-                6,
-              )}...${state.eth.signerAddress.slice(
-                state.eth.signerAddress.length - 4,
-              )}`}
-            </span>
-          </button>
+              type="button"
+            >
+              <div
+                css={[
+                  css`
+                    width: 44px;
+                    height: 44px;
+                  `,
+                  tw`bg-gradient-to-br from-purple-400 to-purple-900`,
+                  tw`rounded-full`,
+                  tw`sm:hidden`,
+                ]}
+              />
+              <span css={[tw`hidden`, tw`sm:inline`]}>
+                {`${state.eth.signerAddress.slice(
+                  0,
+                  6,
+                )}...${state.eth.signerAddress.slice(
+                  state.eth.signerAddress.length - 4,
+                )}`}
+              </span>
+            </button>
+          </Link>
         ) : (
           <button
             css={[

@@ -172,7 +172,7 @@ const ProjectPage = ({ project: initialProject }) => {
             },
           });
           emitter.on('txConfirmed', () => {
-            router.push('/tokens');
+            router.push(`/accounts/${state.eth.signerAddress}`);
           });
         } catch (error) {
           console.error(error);

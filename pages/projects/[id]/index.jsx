@@ -108,7 +108,7 @@ const ProjectPage = ({ project: initialProject }) => {
       project?.codeCid && state?.eth?.signerAddress
         ? `${new URL(
             `/?${new URLSearchParams({
-              address: state.eth.signerAddress,
+              minter: state.eth.signerAddress,
               ...Object.entries(tokenArgumentByParameterKey).reduce(
                 (prev, [paramKey, arg]) => ({
                   ...prev,
@@ -128,8 +128,9 @@ const ProjectPage = ({ project: initialProject }) => {
     async (e) => {
       e.preventDefault();
       if (e.target.reportValidity()) {
-        const pin = async (blob, filename) => {
+        const pin = async (blob, filename, name) => {
           const formData = new FormData();
+          formData.append('name', name);
           formData.append('file', blob, filename);
           const res = await axios.post(
             `${new URL('ipfs/pin', process.env.NEXT_PUBLIC_API_BASE_URL)}`,
@@ -154,6 +155,7 @@ const ProjectPage = ({ project: initialProject }) => {
           const tokenCid = await pin(
             new Blob([JSON.stringify(token)], { type: 'application/json' }),
             'token.json',
+            'token',
           );
 
           const { emitter } = state.eth.notify.transaction({

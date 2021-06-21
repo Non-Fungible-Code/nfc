@@ -63,7 +63,9 @@ const CuratedProjectsPage = ({ curatedProjects: initialCuratedProjects }) => {
     () =>
       fetchCuratedProjects(
         state.eth.nfc,
-        process.env.NEXT_PUBLIC_CURATED_PROJECT_IDS.split(','),
+        String(process.env.NEXT_PUBLIC_CURATED_PROJECT_IDS)
+          .split(',')
+          .filter((id) => !!id),
       ),
     [state?.eth?.nfc],
   );
@@ -189,7 +191,9 @@ export async function getStaticProps() {
   );
   const curatedProjects = await fetchCuratedProjects(
     nfc,
-    process.env.NEXT_PUBLIC_CURATED_PROJECT_IDS.split(','),
+    String(process.env.NEXT_PUBLIC_CURATED_PROJECT_IDS)
+      .split(',')
+      .filter((id) => !!id),
   );
 
   return {

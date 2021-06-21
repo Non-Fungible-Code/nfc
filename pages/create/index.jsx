@@ -56,14 +56,11 @@ const CreatePage = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [projectCodeCid, setProjectCodeCid] = useState('');
   const handleFormCodeFileInputChange = useCallback(async () => {
-    const pin = async () => {
+    const pin = async (files, name) => {
       const formData = new FormData();
-      for (let i = 0; i < codeFileInputRef.current.files.length; i += 1) {
-        formData.append(
-          'files',
-          codeFileInputRef.current.files[i],
-          codeFileInputRef.current.files[i].webkitrelativepath,
-        );
+      formData.append('name', name);
+      for (let i = 0; i < files.length; i += 1) {
+        formData.append('files', files[i], files[i].webkitrelativepath);
       }
       const { cid } = await axios
         .post(
@@ -100,7 +97,7 @@ const CreatePage = () => {
       if (projectCodeCid) {
         await unpin(projectCodeCid);
       }
-      await pin();
+      await pin(codeFileInputRef.current.files, 'project-code-dir');
       codeFileInputRef.current.value = '';
     } catch (err) {
       console.error(err);
@@ -179,7 +176,7 @@ const CreatePage = () => {
       projectCodeCid && state?.eth?.signerAddress
         ? `${new URL(
             `/?${new URLSearchParams({
-              address: state.eth.signerAddress,
+              minter: state.eth.signerAddress,
               ...projectParameters.reduce(
                 (prev, param) => ({
                   ...prev,
@@ -200,8 +197,9 @@ const CreatePage = () => {
       try {
         e.preventDefault();
         if (e.target.reportValidity()) {
-          const pin = async (blob, filename) => {
+          const pin = async (blob, filename, name) => {
             const formData = new FormData();
+            formData.append('name', name);
             formData.append('file', blob, filename);
             const { cid } = await axios
               .post(
@@ -213,6 +211,9 @@ const CreatePage = () => {
           };
           setIsCreating(true);
 
+          if (!projectCodeCid) {
+            throw new Error('Please upload your code');
+          }
           if (
             projectParameters.length >
             Number(process.env.NEXT_PUBLIC_MAX_NUM_PROJECT_PARAMETERS)
@@ -245,6 +246,7 @@ const CreatePage = () => {
               { type: 'application/json' },
             ),
             'parameters.json',
+            'project-parameters',
           );
 
           const project = {
@@ -278,6 +280,7 @@ const CreatePage = () => {
           const tokenCid = await pin(
             new Blob([JSON.stringify(token)], { type: 'application/json' }),
             'token.json',
+            'token',
           );
 
           const { emitter } = state.eth.notify.transaction({
@@ -308,7 +311,7 @@ const CreatePage = () => {
         state.eth.notify.notification({
           eventCode: 'projectCreateError',
           type: 'error',
-          message: !projectCodeCid ? 'Please upload your code' : err.message,
+          message: err.message,
         });
       } finally {
         setIsCreating(false);
@@ -463,7 +466,6 @@ const CreatePage = () => {
                       name="code"
                       webkitdirectory="true"
                       onChange={handleFormCodeFileInputChange}
-                      required
                       disabled={!state?.eth?.signerAddress || isUploading}
                       hidden
                     />

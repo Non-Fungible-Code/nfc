@@ -47,13 +47,21 @@ const Header = ({ className }) => {
   const [state, dispatch] = useContext(Context);
 
   const handleConnectButtonClick = useCallback(async () => {
-    if (state.eth.onboard) {
+    if (state?.eth?.onboard) {
       const isWalletSelected = await state.eth.onboard.walletSelect();
       if (isWalletSelected) {
         await state.eth.onboard.walletCheck();
       }
     }
   }, [state?.eth?.onboard]);
+
+  const handleCreateButtonClick = useCallback(async () => {
+    if (!state?.eth?.signerAddress) {
+      await handleConnectButtonClick();
+      return;
+    }
+    router.push('/create');
+  }, [state?.eth?.signerAddress, handleConnectButtonClick, router]);
 
   const handleMenuButtonClick = useCallback(() => {
     dispatch({
@@ -114,33 +122,32 @@ const Header = ({ className }) => {
           `,
         ]}
       >
-        {state?.eth?.signerAddress && router.pathname !== '/create' && (
-          <Link href="/create">
-            <button
-              css={[
-                tw`hidden`,
-                tw`px-6 py-4`,
-                css`
-                  background-color: #fbda61;
-                  background-image: linear-gradient(
-                    45deg,
-                    #fbda61 0%,
-                    #ff5acd 100%
-                  );
-                `,
-                tw`text-white font-bold`,
-                tw`rounded-full`,
-                tw`shadow-lg`,
-                tw`cursor-pointer`,
-                tw`focus:outline-none`,
-                ...liftWhenHoverMixin,
-                tw`sm:block`,
-              ]}
-              type="button"
-            >
-              Create
-            </button>
-          </Link>
+        {router.pathname !== '/create' && (
+          <button
+            css={[
+              tw`hidden`,
+              tw`px-6 py-4`,
+              css`
+                background-color: #fbda61;
+                background-image: linear-gradient(
+                  45deg,
+                  #fbda61 0%,
+                  #ff5acd 100%
+                );
+              `,
+              tw`text-white font-bold`,
+              tw`rounded-full`,
+              tw`shadow-lg`,
+              tw`cursor-pointer`,
+              tw`focus:outline-none`,
+              ...liftWhenHoverMixin,
+              tw`sm:block`,
+            ]}
+            type="button"
+            onClick={handleCreateButtonClick}
+          >
+            Create
+          </button>
         )}
         {state?.eth?.signerAddress ? (
           <Link href={`/accounts/${state.eth.signerAddress}`}>
